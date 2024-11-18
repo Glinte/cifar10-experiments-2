@@ -162,3 +162,5 @@ cython_debug/
 
 /data
 /stubs
+*.pth
+*.pt
