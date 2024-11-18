@@ -38,3 +38,41 @@ def find_mean_and_stddev(dataset: Dataset[Any]) -> tuple[tuple[float, ...], tupl
 
 CIFAR10_NORMALIZATION = ((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
 """Normalization values for CIFAR-10 calculated from the training dataset. First tuple is mean, second tuple is standard deviation."""
+
+
+def find_max_batch_size(model, input_size, device="cuda", start_batch_size=1):
+    """
+    Find the maximum batch size that fits in GPU memory for a given model and input size.
+
+    Args:
+        model: The PyTorch model to test.
+        input_size: Tuple representing the input dimensions (C, H, W).
+        device: Device to test on ("cuda" or "cpu").
+        start_batch_size: Initial batch size to test.
+
+    Returns:
+        max_batch_size: The largest batch size that fits in GPU memory.
+    """
+    model.to(device)
+    batch_size = start_batch_size
+    max_batch_size = start_batch_size
+
+    while True:
+        try:
+            # Create dummy input tensor
+            dummy_input = torch.randn((batch_size, *input_size), device=device)
+
+            # Run a forward pass
+            with torch.no_grad():
+                model(dummy_input)
+
+            max_batch_size = batch_size  # Update max batch size
+            batch_size *= 2  # Double the batch size
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                torch.cuda.empty_cache()  # Clear memory
+                break
+            else:
+                raise e
+
+    return max_batch_size
