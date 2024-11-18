@@ -37,4 +37,4 @@ def find_mean_and_stddev(dataset: Dataset[Any]) -> tuple[tuple[float, ...], tupl
 
 
 CIFAR10_NORMALIZATION = ((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-"""Normalization values for CIFAR-10. First tuple is mean, second tuple is standard deviation."""
+"""Normalization values for CIFAR-10 calculated from the training dataset. First tuple is mean, second tuple is standard deviation."""
