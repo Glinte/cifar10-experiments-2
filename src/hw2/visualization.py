@@ -171,7 +171,7 @@ def generate_distinct_colors(n_colors: int) -> list[tuple[float, float, float, f
 
 
 @beartype
-def display_color_palette(n_colors: int) -> None:
+def display_color_palette(n_colors: int) -> Figure:
     """
     Display the generated colors in a horizontal strip.
 
@@ -202,6 +202,7 @@ def display_color_palette(n_colors: int) -> None:
 
     plt.title(f'Generated Color Palette ({n_colors} colors)')
     plt.show()
+    return fig
 
 
 @beartype
