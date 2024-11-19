@@ -1,6 +1,5 @@
 from typing import Any
 
-import numpy as np
 import torch
 from torch.utils.data import Dataset
 
@@ -59,18 +58,14 @@ def find_max_batch_size(model, input_size, device="cuda", start_batch_size=1):
 
     while True:
         try:
-            # Create dummy input tensor
             dummy_input = torch.randn((batch_size, *input_size), device=device)
-
-            # Run a forward pass
             with torch.no_grad():
                 model(dummy_input)
-
-            max_batch_size = batch_size  # Update max batch size
-            batch_size *= 2  # Double the batch size
+            max_batch_size = batch_size
+            batch_size *= 2
         except RuntimeError as e:
             if "out of memory" in str(e):
-                torch.cuda.empty_cache()  # Clear memory
+                torch.cuda.empty_cache()
                 break
             else:
                 raise e
