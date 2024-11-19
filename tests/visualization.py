@@ -1,13 +1,8 @@
 """Tests of the visualization module."""
 import pytest
-import torch
 from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10
-from torchvision.transforms import v2
 
-from hw2 import PROJECT_ROOT
-from hw2.util import CIFAR10_NORMALIZATION
-from hw2.visualization import generate_distinct_colors, PCA_visualization
+from hw2.visualization import generate_distinct_colors, PCA_visualization, tsne_visualization
 
 
 @pytest.mark.parametrize("n_colors", [1, 5, 10, 20, 50])
@@ -20,22 +15,21 @@ def test_generate_distinct_colors(n_colors):
 
 
 @pytest.mark.mpl_image_compare
-def test_PCA_visualization(dataloader: DataLoader[tuple[torch.Tensor, torch.Tensor]]):
+def test_PCA_visualization(dataset):
     """Test the PCA_visualization function."""
 
-    transform = v2.Compose([
-        v2.ToImage(),
-        v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize(*CIFAR10_NORMALIZATION),
-    ])
-    cifar10_train = CIFAR10(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform)
-    cifar10_train_loader = DataLoader(cifar10_train, batch_size=65536, shuffle=False, num_workers=2)
-    X, y = next(iter(cifar10_train_loader))
+    dataloader = DataLoader(dataset, batch_size=65536, shuffle=False, num_workers=2)
+    X, y = next(iter(dataloader))
     X = X.reshape(X.shape[0], -1)
-    return PCA_visualization(X, y, cifar10_train.classes, show_fig=False)
+    return PCA_visualization(X, y, dataset.classes, show_fig=False)
 
 
 @pytest.mark.mp_image_compare
-def test_tsne_visualization():
+def test_tsne_visualization(dataset):
     """Test the tsne_visualization function."""
+
+    dataloader = DataLoader(dataset, batch_size=65536, shuffle=False, num_workers=2)
+    X, y = next(iter(dataloader))
+    X = X.reshape(X.shape[0], -1)
+    return tsne_visualization(X, y, dataset.classes, show_fig=False)
 
