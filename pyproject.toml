@@ -23,6 +23,9 @@ dependencies = [
     "torchvision>=0.20.1",
     "wandb>=0.18.7",
     "jaxtyping>=0.2.36",
+    "pytest-mpl>=0.17.0",
+    "pytest-cases>=3.8.6",
+    "pyqt5>=5.15.11",
 ]
 
 [build-system]

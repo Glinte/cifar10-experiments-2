@@ -228,14 +228,16 @@ def PCA_visualization(
     if n_components not in (2, 3):
         raise ValueError("Number of components must be 2 or 3.")
 
-    # Set matplotlib to be interactive
-    mpl.use("Qt5Agg")
-    plt.ion()
+    # To show an interactive plot, we need to close all existing plots and switch to a different backend
+    if show_fig:
+        plt.close("all")
+        mpl.use("Qt5Agg")
 
     pca = PCA(n_components=n_components)
     X_r = pca.fit_transform(X)
 
     fig = plt.figure()
+    alpha = 1 if X.shape[0] < 1000 else 0.5
     if n_components == 2:
         ax = fig.add_subplot(111)
         colors = generate_distinct_colors(len(np.unique(y)))
@@ -247,6 +249,7 @@ def PCA_visualization(
                 X_r[y == i, 1],
                 color=colors[i],
                 label=target_name,
+                alpha=alpha,
             )
     else:
         ax = fig.add_subplot(111, projection="3d")
@@ -260,6 +263,7 @@ def PCA_visualization(
                 X_r[y == i, 2],
                 color=colors[i],
                 label=target_name,
+                alpha=alpha,
             )
 
     ax.legend(loc="best", shadow=False, scatterpoints=1)
@@ -315,7 +319,8 @@ def tsne_visualization(
 
 
 def main():
-    tsne_visualization(np.random.rand(1000, 3072), np.random.randint(0, 10, 1000), [f"Class {i}" for i in range(10)])
+    PCA_visualization(np.random.rand(1000, 3072), np.random.randint(0, 10, 1000), [f"Class {i}" for i in range(10)], n_components=3)
+    # tsne_visualization(np.random.rand(1000, 3072), np.random.randint(0, 10, 1000), [f"Class {i}" for i in range(10)])
 
 if __name__ == "__main__":
     main()

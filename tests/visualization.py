@@ -19,8 +19,10 @@ def test_generate_distinct_colors(n_colors):
         assert all(0 <= c <= 1 for c in color)
 
 
-def test_PCA_visualization():
+@pytest.mark.mpl_image_compare
+def test_PCA_visualization(dataloader: DataLoader[tuple[torch.Tensor, torch.Tensor]]):
     """Test the PCA_visualization function."""
+
     transform = v2.Compose([
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
@@ -30,4 +32,10 @@ def test_PCA_visualization():
     cifar10_train_loader = DataLoader(cifar10_train, batch_size=65536, shuffle=False, num_workers=2)
     X, y = next(iter(cifar10_train_loader))
     X = X.reshape(X.shape[0], -1)
-    PCA_visualization(X, y, cifar10_train.classes)
+    return PCA_visualization(X, y, cifar10_train.classes, show_fig=False)
+
+
+@pytest.mark.mp_image_compare
+def test_tsne_visualization():
+    """Test the tsne_visualization function."""
+
