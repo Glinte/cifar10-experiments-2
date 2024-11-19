@@ -5,10 +5,13 @@ import logging
 from typing import TYPE_CHECKING
 
 import torch
+import wandb
+from sklearn import metrics
 from torch import nn
 from torch import optim
 from torch.nn import functional as F
 
+from hw2.util import CIFAR10_NORMALIZATION
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
@@ -51,6 +54,18 @@ class CNN(nn.Module):
         save_to: str | None = None,
     ) -> None:
         """Train the model."""
+
+        run = wandb.init(
+            project="CISC3027 hw2",
+            job_type="train",
+            config={
+                "model": "CNN",
+                "epochs": epochs,
+                "optimizer": optimizer.__class__.__name__,
+                "learning_rate": optimizer.defaults.get("lr"),
+            }
+        )
+
         self.to(device=device)
         for epoch in range(epochs):  # loop over the dataset multiple times
             running_loss = 0.0
@@ -70,6 +85,8 @@ class CNN(nn.Module):
                 # print statistics
                 running_loss += loss.item()
                 if i % 500 == 499:  # print every 500 mini-batches
+                    accuracy = metrics.accuracy_score(labels.cpu().numpy(), outputs.argmax(dim=1).cpu().numpy())
+                    run.log({"accuracy": accuracy, "batch_loss": loss, "epoch": epoch, "batch": i})
                     print(f"[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}")
                     running_loss = 0.0
 
@@ -77,8 +94,17 @@ class CNN(nn.Module):
             torch.save(self.state_dict(), save_to)
             logger.info(f"Saved model to {save_to}")
 
-    def eval_loop(self, dataloader: DataLoader[tuple[torch.Tensor, torch.Tensor]], device: torch.device) -> float:
-        """Evaluate the model."""
+    def test_loop(self, dataloader: DataLoader[tuple[torch.Tensor, torch.Tensor]], device: torch.device = torch.device("cuda")) -> float:
+        """Test the model."""
+
+        run = wandb.init(
+            project="CISC3027 hw2",
+            job_type="test",
+            config={
+                "model": "CNN",
+            }
+        )
+
         self.eval()
         correct = 0
         total = 0
@@ -94,26 +120,33 @@ class CNN(nn.Module):
 
         accuracy = 100 * correct / total
         logger.info(f"Accuracy of the network on the {total} test images: {accuracy:.2f}%")
+        run.log({"accuracy": accuracy})
         return accuracy
 
 def main():
     from torch.utils.data import DataLoader
     from torchvision.datasets import CIFAR10
+    from torchvision.transforms import v2
 
     from hw2 import PROJECT_ROOT
-    from hw2.util import find_mean_and_stddev
 
     logging.basicConfig(level=logging.INFO)
     logger.info("Logging started")
     model = CNN(channels=3)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    cifar10_normalization = find_mean_and_stddev(CIFAR10(root=PROJECT_ROOT / "data", train=True, transform=None))
+
+    transform = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(*CIFAR10_NORMALIZATION),
+        ]
+    )
 
     train_loader = DataLoader(CIFAR10(root=PROJECT_ROOT / "data", train=True, transform=transform), batch_size=4, shuffle=True, num_workers=2)
-    model.train_loop(criterion, optimizer, train_loader)
-    model.eval()
-    model.eval_loop(DataLoader(cifar10_test_dataset, batch_size=4, shuffle=False, num_workers=2))
+    model.train_loop(criterion, optimizer, train_loader, epochs=1)
+    model.test_loop(DataLoader(CIFAR10(root=PROJECT_ROOT / "data", train=False, transform=transform), batch_size=65536, shuffle=False, num_workers=2))
     logger.info("Logging ended")
 
 if __name__ == "__main__":
