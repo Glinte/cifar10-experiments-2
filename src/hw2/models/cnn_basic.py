@@ -36,6 +36,7 @@ class CNN(nn.Module):
         self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass."""
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = torch.flatten(x, 1)  # flatten all dimensions except batch
@@ -67,7 +68,7 @@ class CNN(nn.Module):
         )
 
         self.to(device=device)
-        for epoch in range(epochs):  # loop over the dataset multiple times
+        for epoch in range(epochs):
             running_loss = 0.0
             for i, data in enumerate[tuple[torch.Tensor, torch.Tensor]](dataloader):
                 # get the inputs; data is a list of [inputs, labels]
@@ -94,6 +95,8 @@ class CNN(nn.Module):
             torch.save(self.state_dict(), save_to)
             logger.info(f"Saved model to {save_to}")
 
+        run.finish()
+
     def test_loop(self, dataloader: DataLoader[tuple[torch.Tensor, torch.Tensor]], device: torch.device = torch.device("cuda")) -> float:
         """Test the model."""
 
@@ -118,9 +121,10 @@ class CNN(nn.Module):
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
 
-        accuracy = 100 * correct / total
+        accuracy = correct / total
         logger.info(f"Accuracy of the network on the {total} test images: {accuracy:.2f}%")
         run.log({"accuracy": accuracy})
+        run.finish()
         return accuracy
 
 def main():
@@ -145,8 +149,9 @@ def main():
     )
 
     train_loader = DataLoader(CIFAR10(root=PROJECT_ROOT / "data", train=True, transform=transform), batch_size=4, shuffle=True, num_workers=2)
-    model.train_loop(criterion, optimizer, train_loader, epochs=1)
+    model.train_loop(criterion, optimizer, train_loader, epochs=5)
     model.test_loop(DataLoader(CIFAR10(root=PROJECT_ROOT / "data", train=False, transform=transform), batch_size=65536, shuffle=False, num_workers=2))
+
     logger.info("Logging ended")
 
 if __name__ == "__main__":
