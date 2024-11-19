@@ -164,3 +164,4 @@ cython_debug/
 /stubs
 *.pth
 *.pt
+**/wandb
