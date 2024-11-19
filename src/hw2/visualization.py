@@ -1,22 +1,20 @@
 from __future__ import annotations
 
-import random
-from typing import Sequence, TYPE_CHECKING, Any, Annotated
+from typing import Sequence, Any, Annotated, Literal
 
+import matplotlib as mpl
 import numpy as np
 from PIL import Image
-import matplotlib as mpl
 from beartype import beartype
 from beartype.vale import Is
-from matplotlib import pyplot as plt, cm
-from matplotlib.colors import ListedColormap
+from jaxtyping import Num, Integer
 from matplotlib import colormaps
+from matplotlib import pyplot as plt
+from matplotlib.colors import ListedColormap
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
-if TYPE_CHECKING:
-    import numpy.typing as npt
-    from stubs.sklearn._typing import MatrixLike
+from hw2.types import Array
 
 
 @beartype
@@ -91,6 +89,7 @@ def visualize_images(
     return combined_image
 
 
+@beartype
 def combine_images_horizontally(images: Sequence[Image.Image]) -> Image.Image:
     """Combine images horizontally."""
     widths, heights = zip(*(i.size for i in images))
@@ -106,6 +105,7 @@ def combine_images_horizontally(images: Sequence[Image.Image]) -> Image.Image:
     return new_image
 
 
+@beartype
 def combine_images_vertically(images: Sequence[Image.Image]) -> Image.Image:
     """Combine images vertically."""
     widths, heights = zip(*(i.size for i in images))
@@ -121,6 +121,7 @@ def combine_images_vertically(images: Sequence[Image.Image]) -> Image.Image:
     return new_image
 
 
+@beartype
 def generate_distinct_colors(n_colors: int) -> list[tuple[float, float, float, float]]:
     """
     Generate visually distinct colors for scatter plot classes.
@@ -168,6 +169,7 @@ def generate_distinct_colors(n_colors: int) -> list[tuple[float, float, float, f
     return colors
 
 
+@beartype
 def display_color_palette(n_colors: int) -> None:
     """
     Display the generated colors in a horizontal strip.
@@ -201,11 +203,12 @@ def display_color_palette(n_colors: int) -> None:
     plt.show()
 
 
+@beartype
 def PCA_visualization(
-    X: MatrixLike,
-    y: np.ndarray[Any, np.dtype[np.integer[Any]]],
+    X: Num[Array, "samples features"],
+    y: Integer[Array, "samples"],
     target_names: Sequence[str] | None = None,
-    n_components: int = 2,
+    n_components: Literal[2, 3] = 2,
 ) -> None:
     """Visualize the data using n-dimensional PCA.
 
@@ -258,43 +261,47 @@ def PCA_visualization(
     plt.show(block=True)
 
 
-def tsne_visualization(X: MatrixLike, y: np.ndarray[Any, np.dtype[np.integer[Any]]], target_names: Sequence[str] | None = None) -> None:
-    pass
+@beartype
+def tsne_visualization(
+    X: Num[Array, "samples features"],
+    y: Integer[Array, "samples"],
+    target_names: Sequence[str] | None = None
+) -> None:
+    """
+    Visualize the data using t-SNE.
 
+    Args:
+        X: The data to visualize.
+        y: The labels of the data.
+        target_names: The names of the labels.
 
-def main():
-    # FIXME
-    data_slice = slice(0, 50000)
-    train_data_flat = train_data.reshape(train_data.shape[0], -1)
-    train_data_flat_reduced = PCA(n_components=200).fit_transform(train_data_flat[data_slice])
-    X_embedded = TSNE(verbose=2, n_iter=5000, min_grad_norm=3e-5, n_jobs=-1).fit_transform(train_data_flat_reduced)
+    Returns:
+        None
+    """
 
-    colors = [
-        "navy",
-        "turquoise",
-        "darkorange",
-        "red",
-        "green",
-        "blue",
-        "purple",
-        "yellow",
-        "black",
-        "pink",
-    ]
+    X_reduced = PCA(n_components=50).fit_transform(X)
+    X_embedded = TSNE(max_iter=5000, min_grad_norm=3e-5, n_jobs=-1).fit_transform(X_reduced)
 
-    plt.figure(figsize=(10, 10))
-    for i, target_name in enumerate(label_names):
-        plt.scatter(
-            X_embedded[train_labels[data_slice] == i, 0],
-            X_embedded[train_labels[data_slice] == i, 1],
+    colors = generate_distinct_colors(len(np.unique(y)))
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    for i, target_name in enumerate(target_names):
+        ax.scatter(
+            X_embedded[y == i, 0],
+            X_embedded[y == i, 1],
             s=10,
             color=colors[i],
             label=target_name,
-            alpha=0.4,
+            alpha=1,
         )
-    plt.legend(loc="best", shadow=False, scatterpoints=1)
-    plt.title("t-SNE of CIFAR-10 dataset")
+    ax.legend(loc="best", shadow=False, scatterpoints=1)
+    fig.suptitle("t-SNE")
+    ax.set_title("n_iter=5000, min_grad_norm=3e-5")
     plt.show()
+
+
+def main():
+    tsne_visualization(np.random.rand(1000, 3072), np.random.randint(0, 10, 1000), [f"Class {i}" for i in range(10)])
 
 if __name__ == "__main__":
     main()
