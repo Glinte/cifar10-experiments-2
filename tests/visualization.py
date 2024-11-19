@@ -28,7 +28,8 @@ def test_PCA_visualization(dataset):
 def test_tsne_visualization(dataset):
     """Test the tsne_visualization function."""
 
-    dataloader = DataLoader(dataset, batch_size=65536, shuffle=False, num_workers=2)
+    # reduce the number of samples to speed up the test
+    dataloader = DataLoader(dataset, batch_size=128, shuffle=False, num_workers=2)
     X, y = next(iter(dataloader))
     X = X.reshape(X.shape[0], -1)
     return tsne_visualization(X, y, dataset.classes, show_fig=False)
