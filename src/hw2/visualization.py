@@ -11,6 +11,7 @@ from jaxtyping import Num, Integer
 from matplotlib import colormaps
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
+from matplotlib.figure import Figure
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
@@ -209,7 +210,8 @@ def PCA_visualization(
     y: Integer[Array, "samples"],
     target_names: Sequence[str] | None = None,
     n_components: Literal[2, 3] = 2,
-) -> None:
+    show_fig: bool = True,
+) -> Figure:
     """Visualize the data using n-dimensional PCA.
 
     Args:
@@ -217,6 +219,10 @@ def PCA_visualization(
         y: The labels of the data.
         target_names: The names of the labels.
         n_components: The number of components to reduce the data to, either 2 or 3.
+        show_fig: Whether to display the figure.
+
+    Returns:
+        Figure: The matplotlib figure.
     """
 
     if n_components not in (2, 3):
@@ -258,15 +264,19 @@ def PCA_visualization(
 
     ax.legend(loc="best", shadow=False, scatterpoints=1)
     ax.set_title("PCA of CIFAR-10 dataset")
-    plt.show(block=True)
+    if show_fig:
+        plt.show(block=True)
+
+    return fig
 
 
 @beartype
 def tsne_visualization(
     X: Num[Array, "samples features"],
     y: Integer[Array, "samples"],
-    target_names: Sequence[str] | None = None
-) -> None:
+    target_names: Sequence[str] | None = None,
+    show_fig: bool = True,
+) -> Figure:
     """
     Visualize the data using t-SNE.
 
@@ -274,9 +284,10 @@ def tsne_visualization(
         X: The data to visualize.
         y: The labels of the data.
         target_names: The names of the labels.
+        show_fig: Whether to display the figure.
 
     Returns:
-        None
+        Figure: The matplotlib figure.
     """
 
     X_reduced = PCA(n_components=50).fit_transform(X)
@@ -297,7 +308,10 @@ def tsne_visualization(
     ax.legend(loc="best", shadow=False, scatterpoints=1)
     fig.suptitle("t-SNE")
     ax.set_title("n_iter=5000, min_grad_norm=3e-5")
-    plt.show()
+    if show_fig:
+        plt.show(block=True)
+
+    return fig
 
 
 def main():
