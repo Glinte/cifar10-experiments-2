@@ -124,9 +124,9 @@ class MLP(nn.Module):
         predictions = []
         true_labels = []
         with torch.no_grad():
-            for images, labels in dataloader:
-                images, labels = images.to(device), labels.to(device)
-                outputs = self(images)
+            for inputs, labels in dataloader:
+                inputs, labels = inputs.to(device), labels.to(device)
+                outputs = self(inputs)
                 _, predicted = torch.max(outputs, 1)
                 predictions.extend(predicted.cpu().numpy())
                 true_labels.extend(labels.cpu().numpy())
