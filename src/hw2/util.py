@@ -181,7 +181,7 @@ def train_on_cifar10(
         accuracy = correct / total
 
         logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}")
-        validate_metrics = validate_on_cifar10(model, criterion, transform, device, log_run=False, data_loader=test_loader)  # log_run=False to avoid double logging
+        validate_metrics = validate_on_cifar10(model, criterion, device=device, log_run=False, data_loader=test_loader)  # log_run=False to avoid double logging
         if log_run:
             wandb.run.log({"epoch": epoch, "train/loss": running_loss, "train/accuracy": accuracy}, commit=False)
             wandb.run.log({f"test/{metric}": value for metric, value in validate_metrics.items()})
