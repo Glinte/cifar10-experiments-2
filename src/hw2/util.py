@@ -129,7 +129,7 @@ def train_on_cifar10(
         raise ValueError("wandb.init() must be called before training with log_run=True")
 
     if transform and (train_data_loader or test_data_loader):
-        raise ValueError("transform and train_data_loader cannot be used together")
+        logger.warning("transform is provided but train_data_loader or test_data_loader is also provided. Ignoring transform.")
 
     def seed_worker(worker_id: int) -> None:
         """Seed the worker RNG for reproducibility."""
