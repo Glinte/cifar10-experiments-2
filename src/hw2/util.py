@@ -95,7 +95,7 @@ def train_on_cifar10(
     *,
     log_run: bool = False,
     data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
-    batch_size: int = 4,
+    batch_size: int = 32,
     shuffle: bool = True,
     seed: int | None = None,
     save_to: str | Path | None = None,
