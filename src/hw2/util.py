@@ -123,6 +123,9 @@ def train_on_cifar10(
     if log_run and wandb.run is None:
         raise ValueError("wandb.init() must be called before training with log_run=True")
 
+    if transform and data_loader:
+        raise ValueError("transform and data_loader cannot be used together")
+
     def seed_worker(worker_id: int) -> None:
         """Seed the worker RNG for reproducibility."""
         worker_seed = torch.initial_seed() % 2 ** 32
@@ -210,6 +213,9 @@ def validate_on_cifar10(
 
     if log_run and wandb.run is None:
         raise ValueError("wandb.init() must be called before validating with log_run=True")
+
+    if transform and data_loader:
+        raise ValueError("transform and data_loader cannot be used together")
 
     if data_loader is None:
         test_loader = DataLoader(
