@@ -147,6 +147,12 @@ def train_on_cifar10(
     else:
         train_loader = data_loader
 
+    test_loader = DataLoader(
+        CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
+        batch_size=batch_size,
+        shuffle=False,
+    )
+
     model.to(device).train()
     for epoch in range(epochs):
         running_loss = 0.0
@@ -168,13 +174,14 @@ def train_on_cifar10(
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-            logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item():.4f}")
+            if batch_size > 500 or i % (500 // batch_size) == 0:
+                logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item():.4f}")
 
         running_loss /= len(train_loader)
         accuracy = correct / total
 
         logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}")
-        validate_metrics = validate_on_cifar10(model, criterion, transform, device, log_run=False)  # log_run=False to avoid double logging
+        validate_metrics = validate_on_cifar10(model, criterion, transform, device, log_run=False, data_loader=test_loader)  # log_run=False to avoid double logging
         if log_run:
             wandb.run.log({"epoch": epoch, "train/loss": running_loss, "train/accuracy": accuracy}, commit=False)
             wandb.run.log({f"test/{metric}": value for metric, value in validate_metrics.items()})
