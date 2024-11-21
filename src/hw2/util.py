@@ -94,7 +94,8 @@ def train_on_cifar10(
     device: torch.device = torch.device("cpu"),
     *,
     log_run: bool = False,
-    data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    train_data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    test_data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     batch_size: int = 32,
     shuffle: bool = True,
     seed: int | None = None,
@@ -113,7 +114,8 @@ def train_on_cifar10(
         epochs: Number of epochs to train.
         device: Device to train on.
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
-        data_loader: DataLoader to use for training. If None, a DataLoader is created from CIFAR-10.
+        train_data_loader: DataLoader to use for training. If None, a DataLoader is created from CIFAR-10.
+        test_data_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
         batch_size: Batch size for training.
         shuffle: Whether to shuffle the training data.
         seed: Seed for reproducibility.
@@ -126,8 +128,8 @@ def train_on_cifar10(
     if log_run and wandb.run is None:
         raise ValueError("wandb.init() must be called before training with log_run=True")
 
-    if transform and data_loader:
-        raise ValueError("transform and data_loader cannot be used together")
+    if transform and (train_data_loader or test_data_loader):
+        raise ValueError("transform and train_data_loader cannot be used together")
 
     def seed_worker(worker_id: int) -> None:
         """Seed the worker RNG for reproducibility."""
@@ -139,7 +141,7 @@ def train_on_cifar10(
     if seed is not None:
         g.manual_seed(seed)
 
-    if data_loader is None:
+    if train_data_loader is None:
         train_loader = DataLoader(
             CIFAR10(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
             batch_size=batch_size,
@@ -148,13 +150,16 @@ def train_on_cifar10(
             generator=g,
         )
     else:
-        train_loader = data_loader
+        train_loader = train_data_loader
 
-    test_loader = DataLoader(
-        CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-        batch_size=batch_size,
-        shuffle=False,
-    )
+    if test_data_loader is None:
+        test_loader = DataLoader(
+            CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
+            batch_size=batch_size,
+            shuffle=False,
+        )
+    else:
+        test_loader = test_data_loader
 
     model.to(device).train()
     validate_metrics = None
@@ -230,7 +235,7 @@ def validate_on_cifar10(
         raise ValueError("wandb.init() must be called before validating with log_run=True")
 
     if transform and data_loader:
-        raise ValueError("transform and data_loader cannot be used together")
+        raise ValueError("transform and train_data_loader cannot be used together")
 
     if data_loader is None:
         test_loader = DataLoader(
