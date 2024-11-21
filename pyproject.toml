@@ -27,6 +27,7 @@ dependencies = [
     "pytest-cases>=3.8.6",
     "pyqt5>=5.15.11",
     "timm>=1.0.11",
+    "torchmetrics>=1.6.0",
 ]
 
 [build-system]
