@@ -99,7 +99,7 @@ def train_on_cifar10(
     shuffle: bool = True,
     seed: int | None = None,
     save_to: str | Path | None = None,
-) -> None:
+) -> tuple[float, float]:
     """
     Train a model on CIFAR-10.
 
@@ -118,6 +118,9 @@ def train_on_cifar10(
         shuffle: Whether to shuffle the training data.
         seed: Seed for reproducibility.
         save_to: Path to save the model to after training.
+
+    Returns:
+        Loss and accuracy on the test set after training.
     """
 
     if log_run and wandb.run is None:
@@ -154,6 +157,7 @@ def train_on_cifar10(
     )
 
     model.to(device).train()
+    validate_metrics = None
     for epoch in range(epochs):
         running_loss = 0.0
         correct = 0
@@ -191,6 +195,8 @@ def train_on_cifar10(
         logger.info(f"Saved model to {save_to}")
         if log_run:
             wandb.run.log_model(save_to)
+
+    return validate_metrics["loss"], validate_metrics["accuracy"]
 
 
 def validate_on_cifar10(
