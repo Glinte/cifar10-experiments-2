@@ -168,6 +168,8 @@ def train_on_cifar10(
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
+            logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item():.4f}")
+
         running_loss /= len(train_loader)
         accuracy = correct / total
 
