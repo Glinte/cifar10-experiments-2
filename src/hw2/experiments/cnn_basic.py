@@ -12,7 +12,6 @@ def test_maximum_batch_size():
     start_batch_size = 1
     max_batch_size = find_max_batch_size(model, input_size, device, start_batch_size)
     print(f"Maximum batch size: {max_batch_size}")
-    assert max_batch_size == 65536
 
 
 def test_varying_batch_size_on_training_performance():

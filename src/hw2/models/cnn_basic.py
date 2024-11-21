@@ -144,13 +144,16 @@ def main():
         [
             v2.ToImage(),
             v2.ToDtype(torch.float32, scale=True),
+            v2.RandomHorizontalFlip(),
+            v2.RandomRotation(10),
             v2.Normalize(*CIFAR10_NORMALIZATION),
         ]
     )
 
     train_loader = DataLoader(CIFAR10(root=PROJECT_ROOT / "data", train=True, transform=transform), batch_size=4, shuffle=True, num_workers=2)
     model.train_loop(criterion, optimizer, train_loader, epochs=5)
-    model.test_loop(DataLoader(CIFAR10(root=PROJECT_ROOT / "data", train=False, transform=transform), batch_size=65536, shuffle=False, num_workers=2))
+    acc = model.test_loop(DataLoader(CIFAR10(root=PROJECT_ROOT / "data", train=False, transform=transform), batch_size=65536, shuffle=False, num_workers=2))
+    torch.save(model.state_dict(), PROJECT_ROOT / f"models/cnn_basic_{acc}.pth")
 
     logger.info("Logging ended")
 
