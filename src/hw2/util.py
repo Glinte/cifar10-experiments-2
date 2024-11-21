@@ -280,7 +280,7 @@ def validate_on_cifar10(
     return metrics_dict
 
 
-def validate_on_fashion_mnist(
+def validate_on_open_set(
     model: nn.Module,
     open_set_prob_fn: Callable[[torch.Tensor], torch.Tensor],
     transform: Callable | None = None,
