@@ -219,7 +219,7 @@ def validate_on_cifar10(
 
     if data_loader is None:
         test_loader = DataLoader(
-            CIFAR10(root="data", train=False, download=True, transform=transform),
+            CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
             batch_size=64,
             shuffle=False,
         )
