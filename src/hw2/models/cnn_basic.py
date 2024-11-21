@@ -11,7 +11,7 @@ from torch import nn
 from torch import optim
 from torch.nn import functional as F
 
-from hw2.util import CIFAR10_NORMALIZATION
+from hw2.util import CIFAR10_NORMALIZATION, train_on_cifar10
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
@@ -128,34 +128,40 @@ class CNN(nn.Module):
         return accuracy
 
 def main():
-    from torch.utils.data import DataLoader
-    from torchvision.datasets import CIFAR10
     from torchvision.transforms import v2
 
     from hw2 import PROJECT_ROOT
 
     logging.basicConfig(level=logging.INFO)
-    logger.info("Logging started")
     model = CNN(channels=3)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.AdamW(model.parameters(), lr=0.001)
+    epochs = 2
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
     transform = v2.Compose(
         [
             v2.ToImage(),
             v2.ToDtype(torch.float32, scale=True),
-            v2.RandomHorizontalFlip(),
-            v2.RandomRotation(10),
+            # v2.RandomHorizontalFlip(),
+            # v2.RandomRotation(10),
             v2.Normalize(*CIFAR10_NORMALIZATION),
         ]
     )
 
-    train_loader = DataLoader(CIFAR10(root=PROJECT_ROOT / "data", train=True, transform=transform), batch_size=4, shuffle=True, num_workers=2)
-    model.train_loop(criterion, optimizer, train_loader, epochs=5)
-    acc = model.test_loop(DataLoader(CIFAR10(root=PROJECT_ROOT / "data", train=False, transform=transform), batch_size=65536, shuffle=False, num_workers=2))
-    torch.save(model.state_dict(), PROJECT_ROOT / f"models/cnn_basic_{acc}.pth")
+    wandb.init(
+        project="CISC3027 hw2",
+        job_type="train",
+        config={
+            "model": "CNN",
+            "epochs": epochs,
+            "optimizer": optimizer.__class__.__name__,
+            "learning_rate": optimizer.defaults.get("lr"),
+        }
+    )
 
-    logger.info("Logging ended")
+    loss, acc = train_on_cifar10(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True)
+    torch.save(model.state_dict(), PROJECT_ROOT / f"models/cnn_basic_{acc}.pth")
 
 if __name__ == "__main__":
     main()
