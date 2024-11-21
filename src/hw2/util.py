@@ -240,7 +240,7 @@ def validate_on_cifar10(
     if data_loader is None:
         test_loader = DataLoader(
             CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-            batch_size=64,
+            batch_size=65536,
             shuffle=False,
         )
     else:
@@ -291,7 +291,7 @@ def validate_on_open_set(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Using a model trained on CIFAR-10, validate the open-set classification on Fashion-MNIST.
 
-    Both the training dataset of Fashion-MNIST are used to validate the model.
+    Both the training and testing dataset of Fashion-MNIST are used to validate the model.
 
     Args:
         model: The model to validate.
@@ -313,19 +313,19 @@ def validate_on_open_set(
 
     mnist_train_loader = DataLoader(
         FashionMNIST(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
-        batch_size=64,
+        batch_size=65536,
         shuffle=False,
     )
 
     mnist_test_loader = DataLoader(
         FashionMNIST(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-        batch_size=64,
+        batch_size=65536,
         shuffle=False,
     )
 
     cifar10_test_loader = DataLoader(
         CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-        batch_size=64,
+        batch_size=65536,
         shuffle=False,
     )
 
