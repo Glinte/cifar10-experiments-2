@@ -89,12 +89,12 @@ def train_on_cifar10(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
     criterion: nn.Module,
-    data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     transform: Callable | None = None,
     epochs: int = 5,
     device: torch.device = torch.device("cpu"),
     *,
     log_run: bool = False,
+    data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     batch_size: int = 4,
     shuffle: bool = True,
     seed: int | None = None,
@@ -109,11 +109,11 @@ def train_on_cifar10(
         model: The model to train. The model is modified in-place.
         optimizer: The optimizer to use.
         criterion: The loss function.
-        data_loader: DataLoader to use for training. If None, a DataLoader is created from CIFAR-10.
         transform: Transform to apply to the images.
         epochs: Number of epochs to train.
         device: Device to train on.
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
+        data_loader: DataLoader to use for training. If None, a DataLoader is created from CIFAR-10.
         batch_size: Batch size for training.
         shuffle: Whether to shuffle the training data.
         seed: Seed for reproducibility.
@@ -184,11 +184,11 @@ def train_on_cifar10(
 def validate_on_cifar10(
     model: nn.Module,
     criterion: nn.Module,
-    data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     transform: Callable | None = None,
     device: torch.device = torch.device("cpu"),
     *,
     log_run: bool = False,
+    data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     additional_metrics: list[Callable[[torch.Tensor, torch.Tensor], Any]] | None = None,
 ) -> dict[str, Any]:
     """
@@ -197,11 +197,11 @@ def validate_on_cifar10(
     Args:
         model: The model to validate.
         criterion: The loss function.
-        data_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
         transform: Transform to apply to the images.
         device: Device to validate on.
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
         additional_metrics: A list of functions that take in the model outputs and labels and return a metric.
+        data_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
 
     Returns:
         A dictionary containing the loss and accuracy, as well as any additional metrics.
