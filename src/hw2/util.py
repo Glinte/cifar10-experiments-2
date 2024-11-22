@@ -170,6 +170,18 @@ def train_on_cifar10(
     else:
         test_loader = cifar_test_loader
 
+    mnist_train_loader = mnist_train_loader or DataLoader(
+        FashionMNIST(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
+        batch_size=65536,
+        shuffle=False,
+    )
+
+    mnist_test_loader = mnist_test_loader or DataLoader(
+        FashionMNIST(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
+        batch_size=65536,
+        shuffle=False,
+    )
+
     model.to(device).train()
     validate_metrics = None
     for epoch in range(epochs):
