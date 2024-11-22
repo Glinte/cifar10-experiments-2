@@ -4,12 +4,15 @@ from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np
+import pandas as pd
 import torch
 import wandb
+from pandas import DataFrame
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from torchmetrics.classification import BinaryROC
 from torchvision.datasets import CIFAR10, FashionMNIST
+from wandb.apis.public import Runs
 
 from hw2 import PROJECT_ROOT
 
@@ -373,3 +376,21 @@ def validate_on_open_set(
         wandb.log({"roc": wandb.plot.roc_curve(all_open_set_probs, labels)})  # Duplicated effort but I don't care at this point
 
     return fpr, tpr, thresholds
+
+
+def get_histories_with_config(runs: Runs) -> DataFrame:
+    """Get a DataFrame of run histories with the config included."""
+
+    histories = runs.histories
+    configs = []
+
+    for run in runs:
+        run_config = run.config
+        run_config_df = DataFrame.from_dict(run_config, orient='index').T
+        run_config_df["run_id"] = run.id
+        run_config_df["run_name"] = run.name
+        configs.append(run_config_df)
+
+    config_df = pd.concat(configs,axis=0)
+    histories = pd.merge(config_df, histories, left_on="run_id", right_on="run_id")
+    return histories
