@@ -92,11 +92,14 @@ def train_on_cifar10(
     transform: Callable | None = None,
     epochs: int = 5,
     device: torch.device = torch.device("cpu"),
+    open_set_prob_fn: Callable[[torch.Tensor], torch.Tensor] | None = None,
     *,
     log_run: bool = False,
-    train_data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
-    test_data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
-    batch_size: int = 32,
+    cifar_train_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    cifar_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    mnist_train_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    mnist_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    batch_size: int = 64,
     shuffle: bool = True,
     seed: int | None = None,
     save_to: str | Path | None = None,
@@ -113,9 +116,12 @@ def train_on_cifar10(
         transform: Transform to apply to the images.
         epochs: Number of epochs to train.
         device: Device to train on.
+        open_set_prob_fn: A function that takes in the model outputs and calculates the probability of the input being in the open set. This function should be batch-compatible. If None, open set detection is not performed.
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
-        train_data_loader: DataLoader to use for training. If None, a DataLoader is created from CIFAR-10.
-        test_data_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
+        cifar_train_loader: DataLoader to use for training. If None, a DataLoader is created from CIFAR-10.
+        cifar_test_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
+        mnist_train_loader: DataLoader to use for training. If None, a DataLoader is created from Fashion-MNIST.
+        mnist_test_loader: DataLoader to use for validation. If None, a DataLoader is created from Fashion-MNIST.
         batch_size: Batch size for training.
         shuffle: Whether to shuffle the training data.
         seed: Seed for reproducibility.
@@ -128,8 +134,8 @@ def train_on_cifar10(
     if log_run and wandb.run is None:
         raise ValueError("wandb.init() must be called before training with log_run=True")
 
-    if transform and (train_data_loader or test_data_loader):
-        logger.warning("transform is provided but train_data_loader or test_data_loader is also provided. Ignoring transform.")
+    if transform and (cifar_train_loader or cifar_test_loader):
+        logger.warning("transform is provided but cifar_train_loader or cifar_test_loader is also provided. Ignoring transform.")
 
     def seed_worker(worker_id: int) -> None:
         """Seed the worker RNG for reproducibility."""
@@ -141,7 +147,7 @@ def train_on_cifar10(
     if seed is not None:
         g.manual_seed(seed)
 
-    if train_data_loader is None:
+    if cifar_train_loader is None:
         train_loader = DataLoader(
             CIFAR10(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
             batch_size=batch_size,
@@ -150,16 +156,16 @@ def train_on_cifar10(
             generator=g,
         )
     else:
-        train_loader = train_data_loader
+        train_loader = cifar_train_loader
 
-    if test_data_loader is None:
+    if cifar_test_loader is None:
         test_loader = DataLoader(
             CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
             batch_size=batch_size,
             shuffle=False,
         )
     else:
-        test_loader = test_data_loader
+        test_loader = cifar_test_loader
 
     model.to(device).train()
     validate_metrics = None
@@ -190,7 +196,9 @@ def train_on_cifar10(
         accuracy = correct / total
 
         logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}")
-        validate_metrics = validate_on_cifar10(model, criterion, device=device, log_run=False, data_loader=test_loader)  # log_run=False to avoid double logging
+        validate_metrics = validate_on_cifar10(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader)  # log_run=False to avoid double logging
+        if open_set_prob_fn is not None:
+            fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader)
         if log_run:
             wandb.run.log({"epoch": epoch, "train/loss": running_loss, "train/accuracy": accuracy}, commit=False)
             wandb.run.log({f"test/{metric}": value for metric, value in validate_metrics.items()})
@@ -211,7 +219,7 @@ def validate_on_cifar10(
     device: torch.device = torch.device("cpu"),
     *,
     log_run: bool = False,
-    data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    cifar_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     additional_metrics: list[Callable[[torch.Tensor, torch.Tensor], Any]] | None = None,
 ) -> dict[str, Any]:
     """
@@ -224,7 +232,7 @@ def validate_on_cifar10(
         device: Device to validate on.
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
         additional_metrics: A list of functions that take in the model outputs and labels and return a metric.
-        data_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
+        cifar_test_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
 
     Returns:
         A dictionary containing the loss and accuracy, as well as any additional metrics.
@@ -234,17 +242,17 @@ def validate_on_cifar10(
     if log_run and wandb.run is None:
         raise ValueError("wandb.init() must be called before validating with log_run=True")
 
-    if transform and data_loader:
-        raise ValueError("transform and train_data_loader cannot be used together")
+    if transform and cifar_test_loader:
+        raise ValueError("transform and cifar_train_loader cannot be used together")
 
-    if data_loader is None:
+    if cifar_test_loader is None:
         test_loader = DataLoader(
             CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
             batch_size=65536,
             shuffle=False,
         )
     else:
-        test_loader = data_loader
+        test_loader = cifar_test_loader
 
     model.to(device).eval()
     running_loss = 0.0
@@ -288,6 +296,9 @@ def validate_on_open_set(
     *,
     log_run: bool = False,
     thresholds: None | int | list[float] | torch.Tensor = None,
+    mnist_train_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    mnist_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    cifar10_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Using a model trained on CIFAR-10, validate the open-set classification on Fashion-MNIST.
 
@@ -300,6 +311,9 @@ def validate_on_open_set(
         device: Device to validate on.
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
         thresholds: Refer to torchmetrics.classification.BinaryROC for more information.
+        mnist_train_loader: DataLoader of Fashion-MNIST training data. If None, a DataLoader is created from Fashion-MNIST.
+        mnist_test_loader: DataLoader of Fashion-MNIST test data. If None, a DataLoader is created from Fashion-MNIST.
+        cifar10_test_loader: DataLoader of CIFAR-10 test data. If None, a DataLoader is created from CIFAR-10.
 
     Returns:
         A tuple of 3 tensors containing
@@ -311,19 +325,19 @@ def validate_on_open_set(
     if log_run and wandb.run is None:
         raise ValueError("wandb.init() must be called before validating with log_run=True")
 
-    mnist_train_loader = DataLoader(
+    mnist_train_loader = mnist_train_loader or  DataLoader(
         FashionMNIST(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
         batch_size=65536,
         shuffle=False,
     )
 
-    mnist_test_loader = DataLoader(
+    mnist_test_loader = mnist_test_loader or DataLoader(
         FashionMNIST(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
         batch_size=65536,
         shuffle=False,
     )
 
-    cifar10_test_loader = DataLoader(
+    cifar10_test_loader = cifar10_test_loader or DataLoader(
         CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
         batch_size=65536,
         shuffle=False,
