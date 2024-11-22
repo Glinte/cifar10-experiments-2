@@ -1,5 +1,7 @@
+import inspect
 import logging
 import random
+from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Literal
 
@@ -247,7 +249,7 @@ def validate_on_cifar10(
         transform: Transform to apply to the images.
         device: Device to validate on.
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
-        additional_metrics: A list of functions that take in the model outputs and labels and return a metric.
+        additional_metrics: A list of functions that take in the (labels, model outputs) and return a metric.
         cifar_test_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
 
     Returns:
@@ -294,10 +296,21 @@ def validate_on_cifar10(
     accuracy = correct / total
 
     metrics_dict = {"loss": running_loss, "accuracy": accuracy}
+    labels, outputs = labels.cpu(), outputs.cpu()
     for metric in additional_metrics:
-        metrics_dict[metric.__name__] = metric(outputs, labels)
+        if inspect.isfunction(metric):
+            metric_name = metric.__name__
+        elif isinstance(metric, partial):
+            metric_name = metric.func.__name__
+        else:
+            raise ValueError("additional_metrics must be a list of functions or partials, or otherwise have a __name__ attribute")
 
-    logger.info(f"Validation {", ".join(f'{metric}: {value:.4f}' for metric, value in metrics_dict.items())}")
+        if metric_name == "classification_report":  # Special case for classification_report
+            metrics_dict[metric_name] = metric(labels, outputs.argmax(dim=1))
+        else:
+            metrics_dict[metric_name] = metric(labels, outputs)
+
+    logger.info(f"Validation {", ".join(f'{metric}: {value}' for metric, value in metrics_dict.items())}")
     if log_run:
         wandb.run.log({f"test/{metric}": value for metric, value in metrics_dict.items()})
 
