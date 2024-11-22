@@ -214,7 +214,8 @@ def train_on_cifar10(
         accuracy = correct / total
 
         logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}")
-        validate_metrics = validate_on_cifar10(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader)  # log_run=False to avoid double logging
+        # log_run=False to avoid double logging, n_samples=500 to speed up validation
+        validate_metrics = validate_on_cifar10(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader, n_samples=500)
         if open_set_prob_fn is not None:
             fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader, cifar10_test_loader=test_loader)
         if log_run:
@@ -239,6 +240,7 @@ def validate_on_cifar10(
     log_run: bool = False,
     cifar_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     additional_metrics: list[Callable[[torch.Tensor, torch.Tensor], Any]] | None = None,
+    n_samples: int = 10000,
 ) -> dict[str, Any]:
     """
     Validate a model on CIFAR-10.
@@ -251,6 +253,7 @@ def validate_on_cifar10(
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
         additional_metrics: A list of functions that take in the (labels, model outputs) and return a metric.
         cifar_test_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
+        n_samples: Number of samples to use for validation. By default, all samples are used.
 
     Returns:
         A dictionary containing the loss and accuracy, as well as any additional metrics.
@@ -266,7 +269,7 @@ def validate_on_cifar10(
     if cifar_test_loader is None:
         test_loader = DataLoader(
             CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-            batch_size=65536,
+            batch_size=n_samples,
             shuffle=False,
         )
     else:
@@ -281,7 +284,7 @@ def validate_on_cifar10(
         additional_metrics = []
 
     with torch.no_grad():
-        for i, data in enumerate[tuple[torch.Tensor, torch.Tensor]](test_loader):
+        for data in test_loader:
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
 
@@ -291,6 +294,7 @@ def validate_on_cifar10(
             predicted = outputs.argmax(dim=1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+            break  # Only one batch is needed, as the batch size is the same as the number of samples to use for validation
 
     running_loss /= len(test_loader)
     accuracy = correct / total
@@ -401,8 +405,8 @@ def validate_on_open_set(
         _load_data(cifar10_test_loader, label=0)
 
     fpr, tpr, thresholds = BinaryROC(thresholds=thresholds)(all_open_set_probs, labels)
-    if log_run:
-        wandb.log({"roc": wandb.plot.roc_curve(all_open_set_probs, labels)})  # Duplicated effort but I don't care at this point
+    # if log_run:
+    #     wandb.log({"roc": wandb.plot.roc_curve(all_open_set_probs, labels)})  # Duplicated effort but I don't care at this point
 
     return fpr, tpr, thresholds
 
