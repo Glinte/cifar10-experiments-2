@@ -1,7 +1,7 @@
 import logging
 import random
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import numpy as np
 import pandas as pd
@@ -172,13 +172,13 @@ def train_on_cifar10(
 
     mnist_train_loader = mnist_train_loader or DataLoader(
         FashionMNIST(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
-        batch_size=65536,
+        batch_size=128,
         shuffle=False,
     )
 
     mnist_test_loader = mnist_test_loader or DataLoader(
         FashionMNIST(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-        batch_size=65536,
+        batch_size=128,
         shuffle=False,
     )
 
@@ -213,7 +213,7 @@ def train_on_cifar10(
         logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}")
         validate_metrics = validate_on_cifar10(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader)  # log_run=False to avoid double logging
         if open_set_prob_fn is not None:
-            fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader)
+            fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader, cifar10_test_loader=test_loader)
         if log_run:
             wandb.run.log({"epoch": epoch, "train/loss": running_loss, "train/accuracy": accuracy}, commit=False)
             wandb.run.log({f"test/{metric}": value for metric, value in validate_metrics.items()})
@@ -340,7 +340,7 @@ def validate_on_open_set(
     if log_run and wandb.run is None:
         raise ValueError("wandb.init() must be called before validating with log_run=True")
 
-    mnist_train_loader = mnist_train_loader or  DataLoader(
+    mnist_train_loader = mnist_train_loader or DataLoader(
         FashionMNIST(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
         batch_size=65536,
         shuffle=False,
@@ -348,13 +348,13 @@ def validate_on_open_set(
 
     mnist_test_loader = mnist_test_loader or DataLoader(
         FashionMNIST(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-        batch_size=65536,
+        batch_size=128,
         shuffle=False,
     )
 
     cifar10_test_loader = cifar10_test_loader or DataLoader(
         CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-        batch_size=65536,
+        batch_size=128,
         shuffle=False,
     )
 
@@ -362,10 +362,10 @@ def validate_on_open_set(
 
     model.to(device).eval()
 
-    all_open_set_probs = torch.empty(0)
-    labels = torch.empty(0)
+    all_open_set_probs = torch.empty(0, device="cpu")
+    labels = torch.empty(0, device="cpu", dtype=torch.bool)
 
-    def _load_data(data_loader):
+    def _load_data(data_loader, label: Literal[0, 1]):
         """Load the data and calculate the open set probabilities."""
         nonlocal all_open_set_probs, labels
         for i, data in enumerate[tuple[torch.Tensor, torch.Tensor]](data_loader):
@@ -373,15 +373,18 @@ def validate_on_open_set(
             inputs = inputs.to(device)
 
             outputs: torch.Tensor = model(inputs)
-            open_set_prob = open_set_prob_fn(outputs)
+            open_set_prob = open_set_prob_fn(outputs.to("cpu"))
 
             all_open_set_probs = torch.cat((all_open_set_probs, open_set_prob))
-            labels = torch.cat((labels, torch.ones(open_set_prob)))
+            if label == 0:
+                labels = torch.cat((labels, torch.zeros_like(open_set_prob, dtype=torch.bool)))
+            else:
+                labels = torch.cat((labels, torch.ones_like(open_set_prob, dtype=torch.bool)))
 
     with torch.no_grad():
-        _load_data(mnist_train_loader)
-        _load_data(mnist_test_loader)
-        _load_data(cifar10_test_loader)
+        _load_data(mnist_train_loader, label=1)
+        _load_data(mnist_test_loader, label=1)
+        _load_data(cifar10_test_loader, label=0)
 
     fpr, tpr, thresholds = BinaryROC(thresholds=thresholds)(all_open_set_probs, labels)
     if log_run:
