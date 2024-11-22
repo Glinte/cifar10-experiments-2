@@ -10,7 +10,8 @@ from sklearn import metrics
 from torch import nn
 
 from hw2 import PROJECT_ROOT
-from hw2.util import CIFAR10_NORMALIZATION
+from hw2.open_set import one_minus_max_of_softmax
+from hw2.util import CIFAR10_NORMALIZATION, validate_on_open_set, train_on_cifar10
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
@@ -139,8 +140,6 @@ class MLP(nn.Module):
 
 
 def main():
-    from torch.utils.data import DataLoader
-    from torchvision.datasets import CIFAR10
     from torchvision.transforms import v2
 
     epochs = 150
@@ -151,17 +150,34 @@ def main():
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(*CIFAR10_NORMALIZATION),
     ])
-    cifar10_train_dataset = CIFAR10(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform)
-    cifar10_test_dataset = CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform)
+
+    run = wandb.init(
+        project="CISC3027 hw2",
+        job_type="test",
+        config={
+            "model": "MLP",
+        }
+    )
 
     model = MLP(input_dim=dims[0], hidden_dims=dims[1:-1], output_dim=dims[-1])
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
-    train_loader = DataLoader(cifar10_train_dataset, batch_size=32, shuffle=True, num_workers=2)
 
-    model.train_loop(criterion, optimizer, train_loader, epochs=epochs)
-    model.test_loop(DataLoader(cifar10_test_dataset, batch_size=65536, shuffle=False, num_workers=2), target_names=cifar10_test_dataset.classes)
+    train_on_cifar10(model, optimizer, criterion, transform, epochs=epochs, device=torch.device("cuda"))
     torch.save(model.state_dict(), PROJECT_ROOT / f"models/mlp_{"_".join(map(str, dims))}_epoch{epochs}.pth")
 
 if __name__ == "__main__":
-    main()
+    from torchvision.transforms import v2
+    model = MLP(input_dim=3072, hidden_dims=[3072, 3072, 3072, 3072, 3072], output_dim=10)
+    model.load_state_dict(torch.load(PROJECT_ROOT / "models/mlp_3072_3072_3072_3072_3072_3072_10_epoch150.pth"))
+    transform = v2.Compose([
+        v2.ToImage(),
+        v2.Resize((32, 32)),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(*CIFAR10_NORMALIZATION),
+    ])
+    # results = validate_on_cifar10(model, CrossEntropyLoss(), transform, device=torch.device("cuda"), additional_metrics=[partial(metrics.classification_report, digits=4)])
+    # for metric, value in results.items():
+    #     print(f"{metric}: {value}")
+    results = validate_on_open_set(model, one_minus_max_of_softmax, transform, device=torch.device("cuda"))
+    print(results)
