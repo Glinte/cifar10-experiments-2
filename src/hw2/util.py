@@ -1,9 +1,10 @@
 import inspect
 import logging
 import random
+from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, overload, cast
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchmetrics.classification import BinaryROC
 from torchvision.datasets import CIFAR10, FashionMNIST
 from tqdm import tqdm
-from wandb.apis.public import Runs
+from wandb.apis.public.runs import Runs
 
 from hw2 import PROJECT_ROOT
 
@@ -186,7 +187,7 @@ def train_on_cifar10(
     )
 
     model.to(device).train()
-    validate_metrics = None
+    validate_metrics = {}
     for epoch in range(epochs):
         running_loss = 0.0
         correct = 0
@@ -219,6 +220,7 @@ def train_on_cifar10(
         if open_set_prob_fn is not None:
             fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader, cifar10_test_loader=test_loader)
         if log_run:
+            assert wandb.run is not None
             wandb.run.log({"epoch": epoch, "train/loss": running_loss, "train/accuracy": accuracy}, commit=False)
             wandb.run.log({f"test/{metric}": value for metric, value in validate_metrics.items()})
 
@@ -226,6 +228,7 @@ def train_on_cifar10(
         torch.save(model.state_dict(), save_to)
         logger.info(f"Saved model to {save_to}")
         if log_run:
+            assert wandb.run is not None
             wandb.run.log_model(save_to)
 
     return validate_metrics["loss"], validate_metrics["accuracy"]
@@ -321,18 +324,53 @@ def validate_on_cifar10(
     return metrics_dict
 
 
+@overload
 def validate_on_open_set(
     model: nn.Module,
+    *,
     open_set_prob_fn: Callable[[torch.Tensor], torch.Tensor],
+    open_set_prob_fns: None = ...,
+    transform: Callable | None = ...,
+    device: torch.device = ...,
+    log_run: bool = ...,
+    thresholds: None | int | list[float] | torch.Tensor = ...,
+    mnist_train_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
+    mnist_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
+    cifar10_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ...
+
+
+@overload
+def validate_on_open_set(
+    model: nn.Module,
+    *,
+    open_set_prob_fn: None = ...,
+    open_set_prob_fns: Sequence[Callable[[torch.Tensor], torch.Tensor]],
+    transform: Callable | None = ...,
+    device: torch.device = ...,
+    log_run: bool = ...,
+    thresholds: None | int | list[float] | torch.Tensor = ...,
+    mnist_train_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
+    mnist_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
+    cifar10_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
+) -> list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+    ...
+
+
+def validate_on_open_set(
+    model: nn.Module,
+    *,
+    open_set_prob_fn: Callable[[torch.Tensor], torch.Tensor] | None = None,
+    open_set_prob_fns: Sequence[Callable[[torch.Tensor], torch.Tensor]] | None = None,
     transform: Callable | None = None,
     device: torch.device = torch.device("cpu"),
-    *,
     log_run: bool = False,
     thresholds: None | int | list[float] | torch.Tensor = None,
     mnist_train_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     mnist_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     cifar10_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] | tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Using a model trained on CIFAR-10, validate the open-set classification on Fashion-MNIST.
 
     Both the training and testing dataset of Fashion-MNIST are used to validate the model.
@@ -340,6 +378,7 @@ def validate_on_open_set(
     Args:
         model: The model to validate.
         open_set_prob_fn: A function that takes in the model outputs and calculates the probability of the input being in the open set. This function should be batch-compatible.
+        open_set_prob_fns: A sequence of functions that take in the model outputs and calculate the probability of the input being in the open set. These functions should be batch-compatible.
         transform: Transform to apply to the images.
         device: Device to validate on.
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
@@ -349,7 +388,8 @@ def validate_on_open_set(
         cifar10_test_loader: DataLoader of CIFAR-10 test data. If None, a DataLoader is created from CIFAR-10.
 
     Returns:
-        A tuple of 3 tensors containing
+        A list of length n_fns containing the results of the open set detection.
+        Each result is a tuple of 3 tensors containing
         - fpr: A 1d tensor of size (n_thresholds, ) with false positive rate values
         - tpr: A 1d tensor of size (n_thresholds, ) with true positive rate values
         - thresholds: A 1d tensor of size (n_thresholds, ) with decreasing threshold values
@@ -358,9 +398,20 @@ def validate_on_open_set(
     if log_run and wandb.run is None:
         raise ValueError("wandb.init() must be called before validating with log_run=True")
 
+    if open_set_prob_fn and open_set_prob_fns:
+        raise ValueError("open_set_prob_fn and open_set_prob_fns cannot be used together")
+
+    if open_set_prob_fn is None and open_set_prob_fns is None:
+        raise ValueError("open_set_prob_fn or open_set_prob_fns must be provided")
+
+    if open_set_prob_fn:
+        open_set_prob_fns = [open_set_prob_fn]
+
+    assert isinstance(open_set_prob_fns, Sequence), "open_set_prob_fns should be defined regardless of parameters at this point"
+
     mnist_train_loader = mnist_train_loader or DataLoader(
         FashionMNIST(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
-        batch_size=65536,
+        batch_size=128,
         shuffle=False,
     )
 
@@ -380,41 +431,53 @@ def validate_on_open_set(
 
     model.to(device).eval()
 
-    all_open_set_probs = torch.empty(0, device="cpu")
+    # Shape: (n_fns, n_samples, n_classes)
+    all_open_set_probs = torch.empty(0, device="cpu")  # Unknown size of data loader
+    # Shape: (n_samples, )
     labels = torch.empty(0, device="cpu", dtype=torch.bool)
 
     def _load_data(data_loader, label: Literal[0, 1]):
         """Load the data and calculate the open set probabilities."""
         nonlocal all_open_set_probs, labels
-        for i, data in enumerate[tuple[torch.Tensor, torch.Tensor]](data_loader):
-            inputs, _ = data
+        for inputs, _ in data_loader:
             inputs = inputs.to(device)
 
             outputs: torch.Tensor = model(inputs)
-            open_set_prob = open_set_prob_fn(outputs.to("cpu"))
+            batch_probs = torch.empty((len(open_set_prob_fns), inputs.size(0)), device="cpu")
 
-            all_open_set_probs = torch.cat((all_open_set_probs, open_set_prob))
+            for j, prob_fn in enumerate(open_set_prob_fns):
+                open_set_probs = prob_fn(outputs)
+                batch_probs[j, :] = open_set_probs
+
+            all_open_set_probs = torch.cat((all_open_set_probs, batch_probs), dim=1)
+
             if label == 0:
-                labels = torch.cat((labels, torch.zeros_like(open_set_prob, dtype=torch.bool)))
+                labels = torch.cat((labels, torch.zeros(inputs.size(0), dtype=torch.bool, device="cpu")))
             else:
-                labels = torch.cat((labels, torch.ones_like(open_set_prob, dtype=torch.bool)))
+                labels = torch.cat((labels, torch.ones(inputs.size(0), dtype=torch.bool, device="cpu")))
 
     with torch.no_grad():
         _load_data(mnist_train_loader, label=1)
         _load_data(mnist_test_loader, label=1)
         _load_data(cifar10_test_loader, label=0)
 
-    fpr, tpr, thresholds = BinaryROC(thresholds=thresholds)(all_open_set_probs, labels)
+    results = []
+    for i, open_set_probs in enumerate(all_open_set_probs):
+        fpr, tpr, thresholds = BinaryROC(thresholds=thresholds)(open_set_probs, labels)
+        results.append((fpr, tpr, thresholds))
     # if log_run:
     #     wandb.log({"roc": wandb.plot.roc_curve(all_open_set_probs, labels)})  # Duplicated effort but I don't care at this point
 
-    return fpr, tpr, thresholds
+    if open_set_prob_fn:
+        return results[0]  # Return a single result if only one function was used
+    else:
+        return results
 
 
 def get_histories_with_config(runs: Runs) -> DataFrame:
     """Get a DataFrame of run histories with the config included."""
 
-    histories = runs.histories(format="pandas")
+    histories = cast(DataFrame, runs.histories(format="pandas"))
     configs = []
 
     for run in tqdm(runs):
