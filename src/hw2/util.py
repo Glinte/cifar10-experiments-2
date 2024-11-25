@@ -249,7 +249,7 @@ def train_on_cifar(
         current_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else optimizer.param_groups[0]["lr"]
         logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}, LR: {current_lr}")
         # log_run=False to avoid double logging, n_samples=500 to speed up validation
-        validate_metrics = validate_on_cifar(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader, n_samples=500)
+        validate_metrics = validate_on_cifar(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader, n_samples=500, cifar_dataset=cifar_dataset)
         if open_set_prob_fn is not None:
             fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader, cifar10_test_loader=test_loader)
         if log_run:
