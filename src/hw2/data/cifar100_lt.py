@@ -9,7 +9,7 @@ from torchvision.datasets import CIFAR100, VisionDataset
 from torchvision.transforms import v2
 from typing_extensions import override
 
-from hw2 import PROJECT_ROOT
+from hw2 import PROJECT_ROOT, CIFAR100LT_NORMALIZATION
 
 
 class CIFAR100LT(CIFAR100):
@@ -32,21 +32,23 @@ class CIFAR100LT(CIFAR100):
         classes (list[str]): The list of class names.
         class_to_idx (dict): A mapping from class names to class indices.
         meta (dict): Metadata of the dataset.
+        basic_train_transform (callable): A good default transform for training images. Not used by default.
+        basic_test_transform (callable): A good default transform for test images. Not used by default.
     """
 
-    default_train_transform = transforms.Compose(
+    basic_train_transform = v2.Compose(
         [
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            v2.ToImage(),
+            v2.RandomCrop(32, padding=4),
+            v2.RandomHorizontalFlip(),
+            v2.Normalize(*CIFAR100LT_NORMALIZATION),
         ]
     )
 
-    default_test_transform = transforms.Compose(
+    basic_test_transform = v2.Compose(
         [
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            v2.ToImage(),
+            v2.Normalize(*CIFAR100LT_NORMALIZATION),
         ]
     )
 
