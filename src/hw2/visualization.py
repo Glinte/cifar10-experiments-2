@@ -6,8 +6,9 @@ import matplotlib as mpl
 import numpy as np
 from PIL import Image
 from beartype import beartype
+from beartype.door import is_bearable
 from beartype.vale import Is
-from jaxtyping import Num, Integer
+from jaxtyping import Num, Integer, Float, jaxtyped
 from matplotlib import colormaps
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
@@ -46,19 +47,22 @@ def visualize_grayscale_image(
     return image
 
 
-@beartype
+def _convert_to_images(data: Float[Array, "N ..."]) -> Sequence[Image.Image]:
+    """Convert an array of 32x32 images to a list of PIL images."""
+    data = np.array(data)
+    if data[0].size == 1024:
+        images = [Image.fromarray(img.reshape(32, 32)) for img in data]
+    else:
+        images = [Image.fromarray(img.reshape(3, 32, 32).astype(np.uint8).transpose(1, 2, 0)) for img in data]
+    return images
+
+
+@jaxtyped(typechecker=beartype)
 def visualize_images(
-    data: Annotated[
-        np.ndarray,
-        Is[lambda data: data[0].size == 1024 or data[0].size == 3072],
-    ],
+    data: Float[Array, "N *Img"] | Sequence[Image.Image],
     *,
     show: bool = True,
-    overlay: Annotated[
-        np.ndarray,
-        Is[lambda data: data[0].size == 1024 or data[0].size == 3072],
-    ]
-    | None = None,
+    overlay: Float[Array, "N *Img"] | Sequence[Image.Image] | None = None,
 ) -> Image.Image:
     """Visualize multiple 32x32 images. Images can be either grayscale or RGB.
 
@@ -69,11 +73,10 @@ def visualize_images(
         show: Whether to display the image in a window.
         overlay: The images to overlay on top of the original images.
     """
-
-    if data[0].size == 1024:
-        images = [Image.fromarray(i.reshape(32, 32)) for i in data]
+    if is_bearable(data, Sequence[Image.Image]):
+        images = data
     else:
-        images = [Image.fromarray(i.astype(np.uint8).reshape(3, 32, 32).transpose(1, 2, 0)) for i in data]
+        images = _convert_to_images(data)
 
     total_images = len(images)
     rows = int(np.sqrt(total_images))
@@ -320,8 +323,23 @@ def tsne_visualization(
 
 
 def main():
-    PCA_visualization(np.random.rand(1000, 3072), np.random.randint(0, 10, 1000), [f"Class {i}" for i in range(10)], n_components=3)
-    # tsne_visualization(np.random.rand(1000, 3072), np.random.randint(0, 10, 1000), [f"Class {i}" for i in range(10)])
+    from hw2.data.cifar100_lt import CIFAR100LT
+    from hw2 import PROJECT_ROOT
+    from torchvision.utils import make_grid
+    import random
+    from torchvision import tv_tensors
+    dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=True, imb_type='exp', imb_factor=0.01, download=True, transform=None)
+    rand_samples = random.choices(dataset, k=100)
+    imgs: list[Image.Image] = [img for img, _target in rand_samples]
+    visualize_images(imgs)
+    grid = make_grid([tv_tensors.Image(img) for img in imgs], nrow=10)
+    plt.figure(figsize=(8, 8))
+    plt.imshow(grid.permute(1, 2, 0))  # Convert from CxHxW to HxWxC
+    plt.axis('off')  # Hide axis for better display
+    plt.show()
+
 
 if __name__ == "__main__":
+    # PCA_visualization(np.random.rand(1000, 3072), np.random.randint(0, 10, 1000), [f"Class {i}" for i in range(10)], n_components=3)
+    # tsne_visualization(np.random.rand(1000, 3072), np.random.randint(0, 10, 1000), [f"Class {i}" for i in range(10)])
     main()
