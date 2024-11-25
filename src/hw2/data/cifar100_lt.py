@@ -1,10 +1,12 @@
+import random
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, List, Tuple, Literal
 
 import numpy as np
 from PIL import Image
 from torchvision.datasets import CIFAR100, VisionDataset
-from torchvision.transforms import transforms
+from torchvision.transforms import v2
 from typing_extensions import override
 
 from hw2 import PROJECT_ROOT
@@ -47,6 +49,29 @@ class CIFAR100LT(CIFAR100):
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ]
     )
+
+    superclass_to_class = {
+        "aquatic mammals": ["beaver", "dolphin", "otter", "seal", "whale"],
+        "fish": ["aquarium_fish", "flatfish", "ray", "shark", "trout"],
+        "flowers": ["orchid", "poppy", "rose", "sunflower", "tulip"],
+        "food containers": ["bottle", "bowl", "can", "cup", "plate"],
+        "fruit and vegetables": ["apple", "mushroom", "orange", "pear", "sweet_pepper"],
+        "household electrical devices": ["clock", "keyboard", "lamp", "telephone", "television"],
+        "household furniture": ["bed", "chair", "couch", "table", "wardrobe"],
+        "insects": ["bee", "beetle", "butterfly", "caterpillar", "cockroach"],
+        "large carnivores": ["bear", "leopard", "lion", "tiger", "wolf"],
+        "large man-made outdoor things": ["bridge", "castle", "house", "road", "skyscraper"],
+        "large natural outdoor scenes": ["cloud", "forest", "mountain", "plain", "sea"],
+        "large omnivores and herbivores": ["camel", "cattle", "chimpanzee", "elephant", "kangaroo"],
+        "medium-sized mammals": ["fox", "porcupine", "possum", "raccoon", "skunk"],
+        "non-insect invertebrates": ["crab", "lobster", "snail", "spider", "worm"],
+        "people": ["baby", "boy", "girl", "man", "woman"],
+        "reptiles": ["crocodile", "dinosaur", "lizard", "snake", "turtle"],
+        "small mammals": ["hamster", "mouse", "rabbit", "shrew", "squirrel"],
+        "trees": ["maple_tree", "oak_tree", "palm_tree", "pine_tree", "willow_tree"],
+        "vehicles 1": ["bicycle", "bus", "motorcycle", "pickup_truck", "train"],
+        "vehicles 2": ["lawn_mower", "rocket", "streetcar", "tank", "tractor"],
+    }
 
     def __init__(
         self,
@@ -169,10 +194,32 @@ class CIFAR100LT(CIFAR100):
         new_data = np.vstack(new_data)
         return new_data, new_targets
 
+    def get_superclass_sample(self):
+        """
+        Takes a CIFAR-100 dataset and returns a dictionary of superclass samples.
+
+        Returns:
+            dict: {superclass: [5 images (one from each subclass)]}
+        """
+        superclass_samples = {}
+
+        for superclass, subclasses in self.superclass_to_class.items():
+            subclass_indices = [self.class_to_idx[subclass] for subclass in subclasses]
+
+            images = []
+            for subclass_idx in subclass_indices:
+                subclass_samples = [i for i, label in enumerate(self.targets) if label == subclass_idx]
+                random_sample_idx = random.choice(subclass_samples)
+                images.append(self[random_sample_idx][0])  # Add the image (not label) to the list
+
+            superclass_samples[superclass] = images
+
+        return superclass_samples
+
 
 def main():
     dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=True, imb_type='exp', imb_factor=0.01, download=True, transform=None)
-    print(dataset)
+    print(dataset.get_superclass_sample())
 
 
 if __name__ == "__main__":
