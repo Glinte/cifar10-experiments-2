@@ -23,7 +23,7 @@ from tqdm import tqdm
 from wandb.apis.public.runs import Runs
 
 from hw2 import PROJECT_ROOT
-
+from hw2.data.cifar100_lt import CIFAR100LT
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ def train_on_cifar(
     shuffle: bool = True,
     seed: int | None = None,
     save_to: str | Path | None = None,
-    cifar_dataset: Literal["10", "100"] = "10",
+    cifar_dataset: Literal["10", "100", "100LT"] = "10",
 ) -> tuple[float, float]:
     """
     Train a model on CIFAR-10.
@@ -145,7 +145,7 @@ def train_on_cifar(
         shuffle: Whether to shuffle the training data.
         seed: Seed for reproducibility.
         save_to: Path to save the model to after training.
-        cifar_dataset: Whether to use CIFAR-10 or CIFAR-100. If data loaders are provided, this parameter is ignored.
+        cifar_dataset: Whether to use CIFAR-10 or CIFAR-100. If data loaders are provided, this parameter is ignored. LT stands for long-tailed.
 
     Returns:
         Loss and accuracy on the test set after training.
@@ -171,6 +171,8 @@ def train_on_cifar(
         CIFAR = CIFAR10
     elif cifar_dataset == "100":
         CIFAR = CIFAR100
+    elif cifar_dataset == "100LT":
+        CIFAR = CIFAR100LT
     else:
         raise ValueError("cifar_dataset must be either '10' or '100'")
 
@@ -267,7 +269,7 @@ def validate_on_cifar(
     cifar_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     additional_metrics: list[Callable[[torch.Tensor, torch.Tensor], Any]] | None = None,
     n_samples: int = 10000,
-    cifar_dataset: Literal["10", "100"] = "10",
+    cifar_dataset: Literal["10", "100", "100LT"] = "10",
 ) -> dict[str, Any]:
     """
     Validate a model on CIFAR-10.
@@ -298,6 +300,8 @@ def validate_on_cifar(
         CIFAR = CIFAR10
     elif cifar_dataset == "100":
         CIFAR = CIFAR100
+    elif cifar_dataset == "100LT":
+        CIFAR = CIFAR100LT
     else:
         raise ValueError("cifar_dataset must be either '10' or '100'")
 
