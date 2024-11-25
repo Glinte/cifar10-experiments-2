@@ -9,12 +9,12 @@ from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2
 
 from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
-from hw2.models.cnn_basic import CNN
+from hw2.models.cnn_basic import LeNet5
 from hw2.util import find_max_batch_size, train_on_cifar10
 
 
 def find_maximum_batch_size():
-    model = CNN(channels=3)
+    model = LeNet5(channels=3)
     input_size = (3, 32, 32)
     device = "cuda"
     start_batch_size = 1
@@ -49,7 +49,7 @@ def varying_batch_size_on_training_performance():
     criterion = nn.CrossEntropyLoss()
 
     for batch_size in batch_sizes:
-        model = CNN(channels=3)
+        model = LeNet5(channels=3)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
         run = wandb.init(
@@ -103,7 +103,7 @@ def varying_learning_rate_on_training_performance():
     criterion = nn.CrossEntropyLoss()
 
     for learning_rate in learning_rates:
-        model = CNN(channels=3)
+        model = LeNet5(channels=3)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
         run = wandb.init(
@@ -157,7 +157,7 @@ def using_different_optimizers():
     criterion = nn.CrossEntropyLoss()
 
     for optimizer_cls in optimizers:
-        model = CNN(channels=3)
+        model = LeNet5(channels=3)
         optimizer = optimizer_cls(model.parameters())
 
         run = wandb.init(
@@ -210,7 +210,7 @@ def varying_epochs():
     )
     criterion = nn.CrossEntropyLoss()
 
-    model = CNN(channels=3)
+    model = LeNet5(channels=3)
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
     run = wandb.init(

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class CNN(nn.Module):
+class LeNet5(nn.Module):
     def __init__(self, channels: int) -> None:
         """Initialize the CNN.
 
@@ -134,7 +134,7 @@ def main():
     from hw2 import PROJECT_ROOT
 
     logging.basicConfig(level=logging.INFO)
-    model = CNN(channels=3)
+    model = LeNet5(channels=3)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=0.001)
     epochs = 2

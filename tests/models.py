@@ -6,7 +6,7 @@ from torchvision.datasets import CIFAR10
 from torchvision.transforms import transforms
 
 from hw2 import PROJECT_ROOT
-from hw2.models.cnn_basic import CNN
+from hw2.models.cnn_basic import LeNet5
 
 @pytest.fixture
 def device():
@@ -16,7 +16,7 @@ def device():
 
 def test_old_cnn_model_f1_score_on_cifar_10(device) -> None:
     """Should achieve F1 score of 0.60 on CIFAR-10 test set."""
-    model = CNN(channels=3)
+    model = LeNet5(channels=3)
     model.load_state_dict(torch.load(PROJECT_ROOT / "models" / "202409260908_cnn_Adam_5(60).pth", weights_only=True))
     model.to(device=device)
     model.eval()
