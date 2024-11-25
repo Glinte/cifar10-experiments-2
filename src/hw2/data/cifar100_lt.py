@@ -5,9 +5,12 @@ import numpy as np
 from PIL import Image
 from torchvision.datasets import CIFAR100, VisionDataset
 from torchvision.transforms import transforms
+from typing_extensions import override
+
+from hw2 import PROJECT_ROOT
 
 
-class CIFAR100LT(VisionDataset):
+class CIFAR100LT(CIFAR100):
     """CIFAR-100 Long-Tailed (Imbalanced) Dataset.
 
     This dataset creates an imbalanced version of the CIFAR-100 dataset,
@@ -51,8 +54,8 @@ class CIFAR100LT(VisionDataset):
         train: bool = True,
         imb_type: Literal["exp", "step"] = 'exp',
         imb_factor: float = 0.01,
-        transform: Callable | None = None,
-        target_transform: Callable | None = None,
+        transform: Callable[[Image.Image], Any] | None = None,
+        target_transform: Callable[[int], Any] | None = None,
         download: bool = False,
     ) -> None:
         """
@@ -67,32 +70,19 @@ class CIFAR100LT(VisionDataset):
             target_transform (callable, optional): A function/transform that takes in the target and transforms it.
             download (bool, optional): If True, downloads the dataset if it doesn't exist in the root directory.
         """
-        super().__init__(root, transform=transform, target_transform=target_transform)
+        if root is None:
+            root = "."  # Use current directory if root is not specified
+        super().__init__(root, train=train, transform=transform, target_transform=target_transform, download=download)
 
         self.train = train
         self.imb_type = imb_type
         self.imb_factor = imb_factor
         self.num_classes = 100  # CIFAR-100 has 100 classes
 
-        # Load the original CIFAR-100 dataset
-        cifar100 = CIFAR100(
-            root=root,
-            train=train,
-            transform=None,  # We will apply transforms later
-            target_transform=None,
-            download=download
-        )
-        self.data = cifar100.data
-        self.targets = cifar100.targets
-        self.meta = cifar100.meta
-
         if self.train:
             # Generate the imbalanced dataset
             self.img_num_per_cls = self._get_img_num_per_cls(self.num_classes, self.imb_type, self.imb_factor)
             self.data, self.targets = self._gen_imbalanced_data(self.data, self.targets, self.img_num_per_cls)
-
-        self.classes = cifar100.classes
-        self.class_to_idx = cifar100.class_to_idx
 
     def _get_img_num_per_cls(self, cls_num: int, imb_type: Literal["exp", "step"], imb_factor: float) -> List[int]:
         """
@@ -179,19 +169,11 @@ class CIFAR100LT(VisionDataset):
         new_data = np.vstack(new_data)
         return new_data, new_targets
 
-    def __len__(self) -> int:
-        return len(self.data)
 
-    def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        img, target = self.data[index], self.targets[index]
+def main():
+    dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=True, imb_type='exp', imb_factor=0.01, download=True, transform=None)
+    print(dataset)
 
-        # Convert numpy array to PIL Image
-        img = Image.fromarray(img)
 
-        if self.transform is not None:
-            img = self.transform(img)
-
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-
-        return img, target
+if __name__ == "__main__":
+    main()
