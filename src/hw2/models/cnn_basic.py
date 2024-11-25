@@ -1,4 +1,4 @@
-"""Basic LeNet-5 CNN model for CIFAR-10 classification."""
+"""Basic LeNet-5 CNN model for classification."""
 from __future__ import annotations
 
 import logging
