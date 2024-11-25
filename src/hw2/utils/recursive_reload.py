@@ -62,3 +62,4 @@ def reload_magic(module):
     >>> import my_module  # import (again) after reload
     """
     reload_recursive(module)
+    print(f"reloaded module: {module}")
