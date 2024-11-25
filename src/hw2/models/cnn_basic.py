@@ -22,11 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 class LeNet5(nn.Module):
-    def __init__(self, channels: int) -> None:
+    def __init__(self, channels: int, n_classes: int) -> None:
         """Initialize the CNN.
 
         Args:
             channels: Number of channels in the input images.
+            n_classes: Number of classes in the output.
         """
         super().__init__()
         self.conv1 = nn.Conv2d(channels, channels * 2, 5)
@@ -34,7 +35,7 @@ class LeNet5(nn.Module):
         self.conv2 = nn.Conv2d(channels * 2, 16, 5)
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.fc3 = nn.Linear(84, n_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass."""
@@ -134,7 +135,7 @@ def main():
     from hw2 import PROJECT_ROOT
 
     logging.basicConfig(level=logging.INFO)
-    model = LeNet5(channels=3)
+    model = LeNet5(channels=3, n_classes=10)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=0.001)
     epochs = 2
