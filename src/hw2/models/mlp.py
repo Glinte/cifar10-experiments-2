@@ -11,9 +11,9 @@ from sklearn import metrics
 from torch import nn
 from torch.nn import CrossEntropyLoss
 
-from hw2 import PROJECT_ROOT
+from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
 from hw2.open_set import one_minus_max_of_prob
-from hw2.util import CIFAR10_NORMALIZATION, validate_on_open_set, train_on_cifar10, validate_on_cifar10
+from hw2.util import validate_on_open_set, train_on_cifar10, validate_on_cifar10
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader

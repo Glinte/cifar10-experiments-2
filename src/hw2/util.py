@@ -22,7 +22,6 @@ from tqdm import tqdm
 from wandb.apis.public.runs import Runs
 
 from hw2 import PROJECT_ROOT
-from hw2.types import Array
 
 logger = logging.getLogger(__name__)
 
@@ -64,10 +63,6 @@ def find_mean_and_stddev(dataset: Dataset[Any]) -> tuple[tuple[float, ...], tupl
     std_tuple = tuple(std_c.tolist())
 
     return mean_tuple, std_tuple
-
-
-CIFAR10_NORMALIZATION = ((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
-"""Normalization values for CIFAR-10 calculated from the training dataset. First tuple is mean, second tuple is standard deviation."""
 
 
 def find_max_batch_size(model, input_size, device="cuda", start_batch_size=1):

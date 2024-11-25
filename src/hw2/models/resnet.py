@@ -8,9 +8,9 @@ from sklearn import metrics
 from torch import nn
 from torchvision.transforms import v2
 
-from hw2 import PROJECT_ROOT
+from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
 from hw2.open_set import one_minus_max_of_prob
-from hw2.util import CIFAR10_NORMALIZATION, train_on_cifar10, validate_on_cifar10
+from hw2.util import train_on_cifar10, validate_on_cifar10
 
 
 def main():

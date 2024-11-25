@@ -8,9 +8,9 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2
 
-from hw2 import PROJECT_ROOT
+from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
 from hw2.models.cnn_basic import CNN
-from hw2.util import find_max_batch_size, CIFAR10_NORMALIZATION, train_on_cifar10
+from hw2.util import find_max_batch_size, train_on_cifar10
 
 
 def find_maximum_batch_size():

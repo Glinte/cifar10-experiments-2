@@ -4,8 +4,7 @@ from torch.utils.data import Dataset
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2
 
-from hw2 import PROJECT_ROOT
-from hw2.util import CIFAR10_NORMALIZATION
+from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
 
 
 @fixture(scope="session")
