@@ -16,7 +16,7 @@ def device():
 
 def test_old_cnn_model_f1_score_on_cifar_10(device) -> None:
     """Should achieve F1 score of 0.60 on CIFAR-10 test set."""
-    model = LeNet5(channels=3)
+    model = LeNet5(channels=3, n_classes=10)
     model.load_state_dict(torch.load(PROJECT_ROOT / "models" / "202409260908_cnn_Adam_5(60).pth", weights_only=True))
     model.to(device=device)
     model.eval()

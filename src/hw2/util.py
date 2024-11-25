@@ -14,6 +14,7 @@ from PIL import Image
 from beartype import beartype
 from pandas import DataFrame
 from torch import nn
+from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import Dataset, DataLoader
 from torchmetrics.classification import BinaryROC
 from torchvision import tv_tensors
@@ -104,6 +105,7 @@ def train_on_cifar(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
     criterion: nn.Module,
+    lr_scheduler: LRScheduler | None = None,
     transform: Callable | None = None,
     epochs: int = 5,
     device: torch.device = torch.device("cpu"),
@@ -129,6 +131,7 @@ def train_on_cifar(
         model: The model to train. The model is modified in-place.
         optimizer: The optimizer to use.
         criterion: The loss function.
+        lr_scheduler: Learning rate scheduler to use.
         transform: Transform to apply to the images.
         epochs: Number of epochs to train.
         device: Device to train on.
@@ -227,6 +230,9 @@ def train_on_cifar(
 
             if batch_size > 500 or i % (500 // batch_size) == 0:
                 logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item():.4f}")
+
+        if lr_scheduler is not None:
+            lr_scheduler.step()
 
         running_loss /= len(train_loader)
         accuracy = correct / total

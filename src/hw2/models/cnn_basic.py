@@ -162,7 +162,7 @@ def main():
         }
     )
 
-    loss, acc = train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True)
+    loss, acc = train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=device, log_run=True)
     torch.save(model.state_dict(), PROJECT_ROOT / f"models/cnn_basic_{acc}.pth")
 
 if __name__ == "__main__":

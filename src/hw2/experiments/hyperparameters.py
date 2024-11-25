@@ -15,7 +15,7 @@ from hw2.util import find_max_batch_size, train_on_cifar
 
 
 def find_maximum_batch_size():
-    model = LeNet5(channels=3)
+    model = LeNet5(channels=3, n_classes=10)
     input_size = (3, 32, 32)
     device = "cuda"
     start_batch_size = 1
@@ -50,7 +50,7 @@ def varying_batch_size_on_training_performance():
     criterion = nn.CrossEntropyLoss()
 
     for batch_size in batch_sizes:
-        model = LeNet5(channels=3)
+        model = LeNet5(channels=3, n_classes=10)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
         run = wandb.init(
@@ -67,7 +67,7 @@ def varying_batch_size_on_training_performance():
             }
         )
 
-        train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
+        train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=device, log_run=True,
                        cifar_test_loader=test_loader, batch_size=batch_size)
 
         run.finish()
@@ -105,7 +105,7 @@ def varying_learning_rate_on_training_performance():
     criterion = nn.CrossEntropyLoss()
 
     for learning_rate in learning_rates:
-        model = LeNet5(channels=3)
+        model = LeNet5(channels=3, n_classes=10)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
         run = wandb.init(
@@ -122,7 +122,7 @@ def varying_learning_rate_on_training_performance():
             }
         )
 
-        train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
+        train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=device, log_run=True,
                        cifar_train_loader=train_loader, cifar_test_loader=test_loader, batch_size=64)
 
         run.finish()
@@ -160,7 +160,7 @@ def using_different_optimizers():
     criterion = nn.CrossEntropyLoss()
 
     for optimizer_cls in optimizers:
-        model = LeNet5(channels=3)
+        model = LeNet5(channels=3, n_classes=10)
         optimizer = optimizer_cls(model.parameters())
 
         run = wandb.init(
@@ -176,7 +176,7 @@ def using_different_optimizers():
             }
         )
 
-        train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
+        train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=device, log_run=True,
                        cifar_train_loader=train_loader, cifar_test_loader=test_loader, batch_size=64)
 
         run.finish()
@@ -213,7 +213,7 @@ def varying_epochs():
     )
     criterion = nn.CrossEntropyLoss()
 
-    model = LeNet5(channels=3)
+    model = LeNet5(channels=3, n_classes=10)
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
     run = wandb.init(
@@ -230,7 +230,7 @@ def varying_epochs():
         }
     )
 
-    train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
+    train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=device, log_run=True,
                    cifar_train_loader=train_loader, cifar_test_loader=test_loader, batch_size=64)
 
     run.finish()

@@ -82,7 +82,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
 
-    train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=torch.device("cuda"), log_run=True)
+    train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=torch.device("cuda"), log_run=True)
     torch.save(model.state_dict(), PROJECT_ROOT / f"models/mlp_{"_".join(map(str, dims))}_epoch{epochs}_2.pth")
 
 if __name__ == "__main__":
