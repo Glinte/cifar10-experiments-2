@@ -10,25 +10,35 @@ import numpy as np
 import pandas as pd
 import torch
 import wandb
+from PIL import Image
+from beartype import beartype
 from pandas import DataFrame
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from torchmetrics.classification import BinaryROC
+from torchvision import tv_tensors
 from torchvision.datasets import CIFAR10, FashionMNIST
 from tqdm import tqdm
 from wandb.apis.public.runs import Runs
 
 from hw2 import PROJECT_ROOT
+from hw2.types import Array
 
 logger = logging.getLogger(__name__)
 
 
+@beartype
 def find_mean_and_stddev(dataset: Dataset[Any]) -> tuple[tuple[float, ...], tuple[float, ...]]:
     """Find the mean and standard deviation of a dataset.
 
-    The shape of the dataset is assumed to be (samples, channels, height, width)."""
+    The shape of the dataset is assumed to be (samples, channels, height, width). PIL Images are also supported."""
     # Get the number of channels from the first sample
     inputs, _labels = dataset[0]
+    is_pil = False
+    if isinstance(inputs, Image.Image):
+        logging.warning("PIL images are supported, but you may want to convert them to float tensors for actual use.")
+        inputs = np.array(inputs).transpose(2, 0, 1)
+        is_pil = True
     num_channels = inputs.shape[0]
 
     # Initialize sums
@@ -37,6 +47,8 @@ def find_mean_and_stddev(dataset: Dataset[Any]) -> tuple[tuple[float, ...], tupl
     total_pixels = 0
 
     for inputs, _labels in dataset:
+        if is_pil:
+            inputs = tv_tensors.Image(inputs)
         inputs = inputs.float()
         c, h, w = inputs.shape
         pixels = h * w
