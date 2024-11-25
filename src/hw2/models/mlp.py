@@ -13,7 +13,7 @@ from torch.nn import CrossEntropyLoss
 
 from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
 from hw2.open_set import one_minus_max_of_prob
-from hw2.util import validate_on_open_set, train_on_cifar10, validate_on_cifar10
+from hw2.util import validate_on_open_set, train_on_cifar, validate_on_cifar
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
@@ -82,7 +82,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
 
-    train_on_cifar10(model, optimizer, criterion, transform, epochs=epochs, device=torch.device("cuda"), log_run=True)
+    train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=torch.device("cuda"), log_run=True)
     torch.save(model.state_dict(), PROJECT_ROOT / f"models/mlp_{"_".join(map(str, dims))}_epoch{epochs}_2.pth")
 
 if __name__ == "__main__":
@@ -96,7 +96,7 @@ if __name__ == "__main__":
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(*CIFAR10_NORMALIZATION),
     ])
-    results = validate_on_cifar10(model, CrossEntropyLoss(), transform, device=torch.device("cuda"), additional_metrics=[partial(metrics.classification_report, digits=4)])
+    results = validate_on_cifar(model, CrossEntropyLoss(), transform, device=torch.device("cuda"), additional_metrics=[partial(metrics.classification_report, digits=4)])
     for metric, value in results.items():
         print(f"{metric}: {value}")
     results = validate_on_open_set(model, open_set_prob_fn=one_minus_max_of_prob, transform=transform, device=torch.device("cuda"))

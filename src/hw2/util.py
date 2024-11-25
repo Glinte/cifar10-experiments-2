@@ -17,7 +17,7 @@ from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from torchmetrics.classification import BinaryROC
 from torchvision import tv_tensors
-from torchvision.datasets import CIFAR10, FashionMNIST
+from torchvision.datasets import CIFAR10, FashionMNIST, CIFAR100
 from tqdm import tqdm
 from wandb.apis.public.runs import Runs
 
@@ -100,7 +100,7 @@ def find_max_batch_size(model, input_size, device="cuda", start_batch_size=1):
     return max_batch_size
 
 
-def train_on_cifar10(
+def train_on_cifar(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
     criterion: nn.Module,
@@ -118,6 +118,7 @@ def train_on_cifar10(
     shuffle: bool = True,
     seed: int | None = None,
     save_to: str | Path | None = None,
+    cifar_dataset: Literal["10", "100"] = "10",
 ) -> tuple[float, float]:
     """
     Train a model on CIFAR-10.
@@ -141,6 +142,7 @@ def train_on_cifar10(
         shuffle: Whether to shuffle the training data.
         seed: Seed for reproducibility.
         save_to: Path to save the model to after training.
+        cifar_dataset: Whether to use CIFAR-10 or CIFAR-100. If data loaders are provided, this parameter is ignored.
 
     Returns:
         Loss and accuracy on the test set after training.
@@ -162,9 +164,16 @@ def train_on_cifar10(
     if seed is not None:
         g.manual_seed(seed)
 
+    if cifar_dataset == "10":
+        CIFAR = CIFAR10
+    elif cifar_dataset == "100":
+        CIFAR = CIFAR100
+    else:
+        raise ValueError("cifar_dataset must be either '10' or '100'")
+
     if cifar_train_loader is None:
         train_loader = DataLoader(
-            CIFAR10(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
+            CIFAR(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
             batch_size=batch_size,
             shuffle=shuffle,
             worker_init_fn=seed_worker,
@@ -175,7 +184,7 @@ def train_on_cifar10(
 
     if cifar_test_loader is None:
         test_loader = DataLoader(
-            CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
+            CIFAR(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
             batch_size=batch_size,
             shuffle=False,
         )
@@ -224,7 +233,7 @@ def train_on_cifar10(
 
         logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}")
         # log_run=False to avoid double logging, n_samples=500 to speed up validation
-        validate_metrics = validate_on_cifar10(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader, n_samples=500)
+        validate_metrics = validate_on_cifar(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader, n_samples=500)
         if open_set_prob_fn is not None:
             fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader, cifar10_test_loader=test_loader)
         if log_run:
@@ -242,7 +251,7 @@ def train_on_cifar10(
     return validate_metrics["loss"], validate_metrics["accuracy"]
 
 
-def validate_on_cifar10(
+def validate_on_cifar(
     model: nn.Module,
     criterion: nn.Module,
     transform: Callable | None = None,
@@ -252,6 +261,7 @@ def validate_on_cifar10(
     cifar_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     additional_metrics: list[Callable[[torch.Tensor, torch.Tensor], Any]] | None = None,
     n_samples: int = 10000,
+    cifar_dataset: Literal["10", "100"] = "10",
 ) -> dict[str, Any]:
     """
     Validate a model on CIFAR-10.
@@ -265,6 +275,7 @@ def validate_on_cifar10(
         additional_metrics: A list of functions that take in the (labels, model outputs) and return a metric.
         cifar_test_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
         n_samples: Number of samples to use for validation. By default, all samples are used.
+        cifar_dataset: Whether to use CIFAR-10 or CIFAR-100. If the data loader is provided, this parameter is ignored.
 
     Returns:
         A dictionary containing the loss and accuracy, as well as any additional metrics.
@@ -277,9 +288,16 @@ def validate_on_cifar10(
     if transform and cifar_test_loader:
         raise ValueError("transform and cifar_train_loader cannot be used together")
 
+    if cifar_dataset == "10":
+        CIFAR = CIFAR10
+    elif cifar_dataset == "100":
+        CIFAR = CIFAR100
+    else:
+        raise ValueError("cifar_dataset must be either '10' or '100'")
+
     if cifar_test_loader is None:
         test_loader = DataLoader(
-            CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
+            CIFAR(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
             batch_size=n_samples,
             shuffle=False,
         )

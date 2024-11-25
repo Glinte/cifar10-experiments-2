@@ -11,7 +11,7 @@ from torch import nn
 from torch import optim
 from torch.nn import functional as F
 
-from hw2.util import train_on_cifar10
+from hw2.util import train_on_cifar
 from hw2 import CIFAR10_NORMALIZATION
 
 if TYPE_CHECKING:
@@ -162,7 +162,7 @@ def main():
         }
     )
 
-    loss, acc = train_on_cifar10(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True)
+    loss, acc = train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True)
     torch.save(model.state_dict(), PROJECT_ROOT / f"models/cnn_basic_{acc}.pth")
 
 if __name__ == "__main__":

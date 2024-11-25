@@ -10,7 +10,7 @@ from torchvision.transforms import v2
 
 from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
 from hw2.open_set import one_minus_max_of_prob
-from hw2.util import train_on_cifar10, validate_on_cifar10
+from hw2.util import train_on_cifar, validate_on_cifar
 
 
 def main():
@@ -49,7 +49,7 @@ def main():
     # torch.save(model.state_dict(), PROJECT_ROOT / f"models/resnet50_epoch{epochs}_{acc:.4f}.pth")
 
     model.load_state_dict(torch.load(PROJECT_ROOT / "models/resnet50_epoch10_0.7344.pth"))
-    results = validate_on_cifar10(model, criterion, transforms, device, additional_metrics=[partial(metrics.classification_report, digits=4)])
+    results = validate_on_cifar(model, criterion, transforms, device, additional_metrics=[partial(metrics.classification_report, digits=4)])
     print(results["classification_report"])
 
     # run.finish()

@@ -11,7 +11,7 @@ from torchvision.transforms import v2
 
 from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
 from hw2.models.cnn_basic import LeNet5
-from hw2.util import find_max_batch_size, train_on_cifar10
+from hw2.util import find_max_batch_size, train_on_cifar
 
 
 def find_maximum_batch_size():
@@ -67,7 +67,8 @@ def varying_batch_size_on_training_performance():
             }
         )
 
-        train_on_cifar10(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True, batch_size=batch_size, cifar_test_loader=test_loader)
+        train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
+                       cifar_test_loader=test_loader, batch_size=batch_size)
 
         run.finish()
 
@@ -121,7 +122,8 @@ def varying_learning_rate_on_training_performance():
             }
         )
 
-        train_on_cifar10(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True, batch_size=64, cifar_test_loader=test_loader, cifar_train_loader=train_loader)
+        train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
+                       cifar_train_loader=train_loader, cifar_test_loader=test_loader, batch_size=64)
 
         run.finish()
 
@@ -174,8 +176,8 @@ def using_different_optimizers():
             }
         )
 
-        train_on_cifar10(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
-                         batch_size=64, cifar_test_loader=test_loader, cifar_train_loader=train_loader)
+        train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
+                       cifar_train_loader=train_loader, cifar_test_loader=test_loader, batch_size=64)
 
         run.finish()
 
@@ -228,8 +230,8 @@ def varying_epochs():
         }
     )
 
-    train_on_cifar10(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
-                     batch_size=64, cifar_test_loader=test_loader, cifar_train_loader=train_loader)
+    train_on_cifar(model, optimizer, criterion, transform, epochs=epochs, device=device, log_run=True,
+                   cifar_train_loader=train_loader, cifar_test_loader=test_loader, batch_size=64)
 
     run.finish()
 
