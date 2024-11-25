@@ -14,7 +14,7 @@ from PIL import Image
 from beartype import beartype
 from pandas import DataFrame
 from torch import nn
-from torch.optim.lr_scheduler import LRScheduler
+from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau
 from torch.utils.data import Dataset, DataLoader
 from torchmetrics.classification import BinaryROC
 from torchvision import tv_tensors
@@ -233,13 +233,21 @@ def train_on_cifar(
             if batch_size > 500 or i % (500 // batch_size) == 0:
                 logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item():.4f}")
 
-        if lr_scheduler is not None:
-            lr_scheduler.step()
-
         running_loss /= len(train_loader)
         accuracy = correct / total
 
-        logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}")
+        if lr_scheduler is not None:
+            # Each scheduler needs some different argument, so we need to check the type
+            if isinstance(lr_scheduler, ReduceLROnPlateau):
+                lr_scheduler.step(running_loss)
+            else:
+                try:
+                    lr_scheduler.step()
+                except TypeError:
+                    raise TypeError("This learning rate scheduler is not supported. It seem to require arguments and no special handling is implemented.")
+
+        current_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else optimizer.param_groups[0]["lr"]
+        logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}, LR: {current_lr}")
         # log_run=False to avoid double logging, n_samples=500 to speed up validation
         validate_metrics = validate_on_cifar(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader, n_samples=500)
         if open_set_prob_fn is not None:
@@ -247,6 +255,8 @@ def train_on_cifar(
         if log_run:
             assert wandb.run is not None
             wandb.run.log({"epoch": epoch, "train/loss": running_loss, "train/accuracy": accuracy}, commit=False)
+            if lr_scheduler is not None:
+                wandb.run.log({"train/lr": current_lr}, commit=False)
             wandb.run.log({f"test/{metric}": value for metric, value in validate_metrics.items()})
 
     if save_to is not None:
