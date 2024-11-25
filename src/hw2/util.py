@@ -23,6 +23,7 @@ from wandb.apis.public.runs import Runs
 
 from hw2 import PROJECT_ROOT
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,7 +36,7 @@ def find_mean_and_stddev(dataset: Dataset[Any]) -> tuple[tuple[float, ...], tupl
     inputs, _labels = dataset[0]
     is_pil = False
     if isinstance(inputs, Image.Image):
-        logging.warning("PIL images are supported, but you may want to convert them to float tensors for actual use.")
+        logger.warning("PIL images are supported, but you may want to convert them to float tensors for actual use.")
         inputs = np.array(inputs).transpose(2, 0, 1)
         is_pil = True
     num_channels = inputs.shape[0]
