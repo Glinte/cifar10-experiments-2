@@ -31,6 +31,7 @@ class CIFAR100LT(CIFAR100):
         num_classes (int): The total number of classes in the dataset.
         classes (list[str]): The list of class names.
         class_to_idx (dict): A mapping from class names to class indices.
+        superclass_to_class (dict): A mapping from superclass names to a list of subclass names.
         meta (dict): Metadata of the dataset.
         basic_train_transform (callable): A good default transform for training images. Not used by default.
         basic_test_transform (callable): A good default transform for test images. Not used by default.
