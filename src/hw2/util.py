@@ -15,7 +15,7 @@ from beartype import beartype
 from pandas import DataFrame
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, BatchSampler, RandomSampler
 from torchmetrics.classification import BinaryROC
 from torchvision import tv_tensors
 from torchvision.datasets import CIFAR10, FashionMNIST, CIFAR100
@@ -119,6 +119,8 @@ def train_on_cifar(
     batch_size: int = 64,
     shuffle: bool = True,
     seed: int | None = None,
+    batch_sampler: BatchSampler | None = None,
+    n_test_samples: int = 500,
     save_to: str | Path | None = None,
     cifar_dataset: Literal["10", "100", "100LT"] = "10",
 ) -> tuple[float, float]:
@@ -144,6 +146,8 @@ def train_on_cifar(
         batch_size: Batch size for training.
         shuffle: Whether to shuffle the training data.
         seed: Seed for reproducibility.
+        batch_sampler: Batch sampler to use for training. If provided, batch_size and shuffle are ignored.
+        n_test_samples: Number of samples to use for validation during training. A full validation will be run at the end of training regardless of this parameter.
         save_to: Path to save the model to after training.
         cifar_dataset: Whether to use CIFAR-10 or CIFAR-100. If data loaders are provided, this parameter is ignored. LT stands for long-tailed.
 
@@ -174,90 +178,73 @@ def train_on_cifar(
     elif cifar_dataset == "100LT":
         CIFAR = CIFAR100LT
     else:
-        raise ValueError("cifar_dataset must be either '10' or '100'")
+        raise ValueError(f"Unknown value {cifar_dataset} for cifar_dataset. Check type hint for valid values.")
 
-    if cifar_train_loader is None:
-        train_loader = DataLoader(
-            CIFAR(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
-            batch_size=batch_size,
-            shuffle=shuffle,
-            worker_init_fn=seed_worker,
-            generator=g,
-        )
-    else:
-        train_loader = cifar_train_loader
+    cifar_train_dataset = CIFAR(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform)
+    cifar_test_dataset = CIFAR(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform)
+    mnist_train_dataset = FashionMNIST(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform)
+    mnist_test_dataset = FashionMNIST(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform)
 
-    if cifar_test_loader is None:
-        test_loader = DataLoader(
-            CIFAR(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-            batch_size=batch_size,
-            shuffle=False,
-        )
-    else:
-        test_loader = cifar_test_loader
+    train_sampler = batch_sampler or BatchSampler(RandomSampler(cifar_train_dataset, generator=g), batch_size, drop_last=False)
 
-    mnist_train_loader = mnist_train_loader or DataLoader(
-        FashionMNIST(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform),
-        batch_size=128,
-        shuffle=False,
-    )
-
-    mnist_test_loader = mnist_test_loader or DataLoader(
-        FashionMNIST(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-        batch_size=128,
-        shuffle=False,
-    )
+    cifar_train_loader = cifar_train_loader or DataLoader(cifar_train_dataset, worker_init_fn=seed_worker, batch_sampler=train_sampler)
+    cifar_test_loader = cifar_test_loader or DataLoader(cifar_test_dataset, batch_size=128, shuffle=False)
+    mnist_train_loader = mnist_train_loader or DataLoader(mnist_train_dataset, batch_size=128, shuffle=False)
+    mnist_test_loader = mnist_test_loader or DataLoader(mnist_test_dataset, batch_size=128, shuffle=False)
 
     model.to(device).train()
     validate_metrics = {}
-    for epoch in range(epochs):
-        running_loss = 0.0
-        correct = 0
-        total = 0
+    try:  # Catch keyboard interrupts to save the model
+        for epoch in range(epochs):
+            running_loss = 0.0
+            correct = 0
+            total = 0
 
-        for i, data in enumerate[tuple[torch.Tensor, torch.Tensor]](train_loader):
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+            for i, data in enumerate[tuple[torch.Tensor, torch.Tensor]](cifar_train_loader):
+                inputs, labels = data
+                inputs, labels = inputs.to(device), labels.to(device)
 
-            optimizer.zero_grad()
-            outputs: torch.Tensor = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+                optimizer.zero_grad()
+                outputs: torch.Tensor = model(inputs)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimizer.step()
 
-            running_loss += loss.item()
-            predicted = outputs.argmax(dim=1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+                running_loss += loss.item()
+                predicted = outputs.argmax(dim=1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
 
-            if batch_size > 500 or i % (500 // batch_size) == 0:
-                logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item():.4f}")
+                if batch_size > 500 or i % (500 // batch_size) == 0:
+                    logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item():.4f}")
 
-        running_loss /= len(train_loader)
-        accuracy = correct / total
+            running_loss /= len(cifar_train_loader)
+            accuracy = correct / total
 
-        if lr_scheduler is not None:
-            # Each scheduler needs some different argument, so we need to check the type
-            if isinstance(lr_scheduler, ReduceLROnPlateau):
-                lr_scheduler.step(running_loss)
-            else:
-                try:
-                    lr_scheduler.step()
-                except TypeError:
-                    raise TypeError("This learning rate scheduler is not supported. It seem to require arguments and no special handling is implemented.")
-
-        current_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else optimizer.param_groups[0]["lr"]
-        logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}, LR: {current_lr}")
-        # log_run=False to avoid double logging, n_samples=500 to speed up validation
-        validate_metrics = validate_on_cifar(model, criterion, device=device, log_run=False, cifar_test_loader=test_loader, n_samples=500, cifar_dataset=cifar_dataset)
-        if open_set_prob_fn is not None:
-            fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader, cifar10_test_loader=test_loader)
-        if log_run:
-            assert wandb.run is not None
-            wandb.run.log({"epoch": epoch, "train/loss": running_loss, "train/accuracy": accuracy}, commit=False)
             if lr_scheduler is not None:
-                wandb.run.log({"train/lr": current_lr}, commit=False)
-            wandb.run.log({f"test/{metric}": value for metric, value in validate_metrics.items()})
+                # Each scheduler needs some different argument, so we need to check the type
+                if isinstance(lr_scheduler, ReduceLROnPlateau):
+                    lr_scheduler.step(running_loss)
+                else:
+                    try:
+                        lr_scheduler.step()
+                    except TypeError:
+                        raise TypeError("This learning rate scheduler is not supported. It seem to require arguments and no special handling is implemented.")
+
+            current_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else optimizer.param_groups[0]["lr"]
+            logger.info(f"Epoch {epoch}, Loss: {running_loss:.4f}, Accuracy: {accuracy:.4f}, LR: {current_lr}")
+            # log_run=False to avoid double logging, n_samples=500 to speed up validation
+            validate_metrics = validate_on_cifar(model, criterion, device=device, n_samples=n_test_samples, log_run=False, cifar_test_loader=cifar_test_loader, cifar_dataset=cifar_dataset)
+            if open_set_prob_fn is not None:
+                fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader, cifar10_test_loader=cifar_test_loader)
+            if log_run:
+                assert wandb.run is not None
+                wandb.run.log({"epoch": epoch, "train/loss": running_loss, "train/accuracy": accuracy}, commit=False)
+                if lr_scheduler is not None:
+                    wandb.run.log({"train/lr": current_lr}, commit=False)
+                wandb.run.log({f"test/{metric}": value for metric, value in validate_metrics.items()})
+    except KeyboardInterrupt:
+        logger.info("Training interrupted. Saving model.")
 
     if save_to is not None:
         torch.save(model.state_dict(), save_to)
@@ -292,7 +279,7 @@ def validate_on_cifar(
         log_run: Whether to log the run to Weights & Biases. This assumes that wandb.init() has already been called.
         additional_metrics: A list of functions that take in the (labels, model outputs) and return a metric.
         cifar_test_loader: DataLoader to use for validation. If None, a DataLoader is created from CIFAR-10.
-        n_samples: Number of samples to use for validation. By default, all samples are used.
+        n_samples: Number of samples to use for validation. The testing loop will stop when this number of samples is reached.
         cifar_dataset: Whether to use CIFAR-10 or CIFAR-100. If the data loader is provided, this parameter is ignored.
 
     Returns:
@@ -343,7 +330,9 @@ def validate_on_cifar(
             predicted = outputs.argmax(dim=1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-            break  # Only one batch is needed, as the batch size is the same as the number of samples to use for validation
+
+            if total >= n_samples:
+                break
 
     running_loss /= len(test_loader)
     accuracy = correct / total
