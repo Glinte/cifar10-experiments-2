@@ -117,10 +117,10 @@ class CIFAR100LT(CIFAR100):
         This method calculates the desired number of samples for each class based on the specified imbalance type (`imb_type`) and imbalance factor (`imb_factor`). It simulates different imbalanced data distributions to reflect real-world scenarios where class frequencies are not uniform.
 
         Returns:
-            list[int]: A list containing the computed number of images for each class after applying the specified imbalance. The length of the list is equal to `cls_num`, and each element corresponds to a class index.
+            list[int]: A list containing the computed number of images for each class after applying the specified imbalance. The length of the list is equal to `self.num_classes`, and each element corresponds to a class index.
         """
 
-        return get_img_num_per_cls(self.num_classes, self.imb_type, self.imb_factor, img_max=len(self.data) // cls_num)
+        return get_img_num_per_cls(self.num_classes, self.imb_type, self.imb_factor, img_max=len(self.data) // self.num_classes)
 
     @staticmethod
     def _gen_imbalanced_data(
