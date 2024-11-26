@@ -234,6 +234,7 @@ def get_img_num_per_cls(cls_num: int, imb_type: Literal["exp", "step"], imb_fact
 def main():
     dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=True, imb_type='exp', imb_factor=0.01, download=True, transform=None)
     print(dataset.get_superclass_sample())
+    print(CIFAR100LT_NORMALIZATION)
 
 
 if __name__ == "__main__":

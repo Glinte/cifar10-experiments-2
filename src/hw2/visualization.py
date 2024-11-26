@@ -323,20 +323,7 @@ def tsne_visualization(
 
 
 def main():
-    from hw2.data.cifar100_lt import CIFAR100LT
-    from hw2 import PROJECT_ROOT
-    from torchvision.utils import make_grid
-    import random
-    from torchvision import tv_tensors
-    dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=True, imb_type='exp', imb_factor=0.01, download=True, transform=None)
-    rand_samples = random.choices(dataset, k=100)
-    imgs: list[Image.Image] = [img for img, _target in rand_samples]
-    visualize_images(imgs)
-    grid = make_grid([tv_tensors.Image(img) for img in imgs], nrow=10)
-    plt.figure(figsize=(8, 8))
-    plt.imshow(grid.permute(1, 2, 0))  # Convert from CxHxW to HxWxC
-    plt.axis('off')  # Hide axis for better display
-    plt.show()
+    pass
 
 
 if __name__ == "__main__":
