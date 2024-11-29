@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Any, Callable, List, Tuple, Literal
 
 import numpy as np
+from matplotlib import patches, pyplot as plt
 from PIL import Image
 import torch
+from matplotlib.figure import Figure
 from torchvision.datasets import CIFAR100, VisionDataset
 from torchvision.transforms import v2
 from typing_extensions import override
@@ -189,6 +191,54 @@ class CIFAR100LT(CIFAR100):
 
         return superclass_samples
 
+    def visualize(self) -> Figure:
+        fig, axes = plt.subplots(10, 10, figsize=(18, 18))
+        for i, (cls, superclass_samples) in enumerate(self.get_superclass_sample().items()):
+            for j, img in enumerate(superclass_samples):
+                axes[i // 2, j + 5 * (i % 2)].imshow(img)
+                axes[i // 2, j + 5 * (i % 2)].axis("off")
+                axes[i // 2, j + 5 * (i % 2)].set_title(self.superclass_to_class[cls][j])
+
+            # Format the superclass name to split words into separate lines, because the graph has overlapping text without this
+            formatted_superclass = "\n".join(cls.split())
+
+            # Add superclass labels
+            if i % 2 == 0:  # Left side
+                axes[i // 2, 0].annotate(
+                    formatted_superclass,
+                    xy=(-0.4, 0.5),
+                    xycoords="axes fraction",
+                    fontsize=10,
+                    ha="center",
+                    va="center",
+                    rotation=90,
+                    wrap=True,
+                )
+            else:  # Right side
+                axes[i // 2, 9].annotate(
+                    formatted_superclass,
+                    xy=(1.4, 0.5),
+                    xycoords="axes fraction",
+                    fontsize=10,
+                    ha="center",
+                    va="center",
+                    rotation=270,
+                    wrap=True,
+                )
+
+        for ax_row in axes:
+            ax_row[4].add_patch(
+                patches.Rectangle(
+                    xy=(1.08, -0.05),
+                    width=0.02,
+                    height=1.4,
+                    transform=ax_row[4].transAxes,
+                    color="black",
+                    clip_on=False,
+                )
+            )
+
+        return fig
 
 def get_img_num_per_cls(cls_num: int, imb_type: Literal["exp", "step"], imb_factor: float, img_max: int) -> List[int]:
     """
@@ -237,8 +287,10 @@ def get_img_num_per_cls(cls_num: int, imb_type: Literal["exp", "step"], imb_fact
 
 def main():
     dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=True, imb_type='exp', imb_factor=0.01, download=True, transform=None)
-    print(dataset.get_superclass_sample())
-    print(CIFAR100LT_NORMALIZATION)
+    # print(dataset.get_superclass_sample())
+    # print(CIFAR100LT_NORMALIZATION)
+    fig = dataset.visualize()
+    fig.show()
 
 
 if __name__ == "__main__":
