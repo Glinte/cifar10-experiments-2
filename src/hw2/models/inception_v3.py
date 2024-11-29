@@ -72,7 +72,7 @@ if __name__ == '__main__':
         "_model_auto": model.__class__.__name__,
         "model": "Inception v3",
         "epochs": 120,
-        "learning_rate": 0.005,
+        "learning_rate": 0.001,
         "batch_size": 64,
         "device": torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
         "dataset": "CIFAR100LT"
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), weight_decay=0.1, lr=config["learning_rate"])
     # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=config["epochs"], eta_min=0)
-    scheduler = warmup(lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.2))
+    scheduler = warmup(lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2))
 
     config.update({
         "optimizer": optimizer.__class__.__name__,
