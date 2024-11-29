@@ -15,6 +15,7 @@ from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+import torch
 
 from hw2.types import Array
 
