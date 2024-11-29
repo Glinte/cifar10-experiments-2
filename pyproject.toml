@@ -47,3 +47,4 @@ include = ["src"]
 defineConstant = { DEBUG = true }
 stubPath = "src/stubs"
 pythonVersion = "3.12"
+reportPrivateImportUsage  = false
