@@ -15,7 +15,7 @@ from beartype import beartype
 from pandas import DataFrame
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau
-from torch.utils.data import Dataset, DataLoader, BatchSampler, RandomSampler
+from torch.utils.data import Dataset, DataLoader, BatchSampler, RandomSampler, SequentialSampler
 from torchmetrics.classification import BinaryROC
 from torchvision import tv_tensors
 from torchvision.datasets import CIFAR10, FashionMNIST, CIFAR100
@@ -122,7 +122,7 @@ def train_on_cifar(
     batch_sampler: BatchSampler | None = None,
     n_test_samples: int = 500,
     save_to: str | Path | None = None,
-    cifar_dataset: Literal["10", "100", "100LT"] = "10",
+    cifar_dataset: Literal["CIFAR10", "CIFAR100", "CIFAR100LT"] = "CIFAR10",
 ) -> tuple[float, float]:
     """
     Train a model on CIFAR-10/100.
@@ -185,7 +185,14 @@ def train_on_cifar(
     mnist_train_dataset = FashionMNIST(root=PROJECT_ROOT / "data", train=True, download=True, transform=transform)
     mnist_test_dataset = FashionMNIST(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform)
 
-    train_sampler = batch_sampler or BatchSampler(RandomSampler(cifar_train_dataset, generator=g), batch_size, drop_last=False)
+    if batch_sampler is not None:
+        train_sampler = batch_sampler
+    else:
+        if shuffle:
+            train_sampler = RandomSampler(cifar_train_dataset, generator=g)
+        else:
+            train_sampler = SequentialSampler(cifar_train_dataset)
+        train_sampler = BatchSampler(train_sampler, batch_size, drop_last=False)
 
     cifar_train_loader = cifar_train_loader or DataLoader(cifar_train_dataset, worker_init_fn=seed_worker, batch_sampler=train_sampler)
     cifar_test_loader = cifar_test_loader or DataLoader(cifar_test_dataset, batch_size=128, shuffle=False)
@@ -236,7 +243,7 @@ def train_on_cifar(
             # log_run=False to avoid double logging, n_samples=500 to speed up validation
             validate_metrics = validate_on_cifar(model, criterion, device=device, n_samples=n_test_samples, log_run=False, cifar_test_loader=cifar_test_loader, cifar_dataset=cifar_dataset)
             if open_set_prob_fn is not None:
-                fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader, cifar10_test_loader=cifar_test_loader)
+                fpr, tpr, thresholds = validate_on_open_set(model, open_set_prob_fn=open_set_prob_fn, device=device, log_run=log_run, mnist_train_loader=mnist_train_loader, mnist_test_loader=mnist_test_loader, cifar_test_loader=cifar_test_loader)
             if log_run:
                 assert wandb.run is not None
                 wandb.run.log({"epoch": epoch, "train/loss": running_loss, "train/accuracy": accuracy}, commit=False)
@@ -456,7 +463,7 @@ def validate_on_open_set(
         shuffle=False,
     )
 
-    cifar10_test_loader = cifar10_test_loader or DataLoader(
+    cifar_test_loader = cifar_test_loader or DataLoader(
         CIFAR10(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
         batch_size=128,
         shuffle=False,
@@ -526,3 +533,72 @@ def get_histories_with_config(runs: Runs) -> DataFrame:
     assert isinstance(config_df, DataFrame)
     histories = pd.merge(config_df, histories, left_on="run_id", right_on="run_id")
     return histories
+
+
+def plot_per_class_accuracy(
+    models_dict: dict[str, nn.Module],
+    dataloader: DataLoader,
+    labelnames: Sequence[Any],
+    img_num_per_cls: Sequence[int],
+    n_classes: int = 100,
+    device: torch.device = torch.device("cpu")
+):
+    # Adapted from https://github.com/ShadeAlsha/LTR-weight-balancing/blob/master/utils/plot_funcs.py
+    result_dict = {}
+    for label in models_dict:
+        model = models_dict[label]
+        acc_per_class = get_per_class_acc(model, dataloader, n_classes=n_classes, device=device)
+        result_dict[label] = acc_per_class
+
+    plt.figure(figsize=(15, 4), dpi=64, facecolor='w', edgecolor='k')
+    plt.xticks(list(range(100)), labelnames, rotation=90, fontsize=8);  # Set text labels.
+    plt.title('per-class accuracy vs. per-class #images', fontsize=20)
+    ax1 = plt.gca()
+    ax2 = ax1.twinx()
+    for label in result_dict:
+        ax1.bar(list(range(100)), result_dict[label], alpha=0.7, width=1, label=label, edgecolor="black")
+
+    ax1.set_ylabel('accuracy', fontsize=16, color='tab:blue')
+    ax1.tick_params(axis='y', labelcolor='tab:blue', labelsize=16)
+
+    ax2.set_ylabel('#images', fontsize=16, color='r')
+    ax2.plot(img_num_per_cls, linewidth=4, color='r')
+    ax2.tick_params(axis='y', labelcolor='r', labelsize=16)
+
+    ax1.legend(prop={'size': 14})
+
+
+def get_per_class_acc(model: nn.Module, dataloader: DataLoader, n_classes: int = 100, device: torch.device = torch.device("cpu")):
+    predList = np.array([])
+    grndList = np.array([])
+    model.eval()
+    for sample in dataloader:
+        with torch.no_grad():
+            images, labels = sample
+            images = images.to(device)
+            labels = labels.type(torch.long).view(-1).numpy()
+            logits = model(images)
+            softmaxScores = F.softmax(logits, dim=1)
+
+            predLabels = softmaxScores.argmax(dim=1).detach().squeeze().cpu().numpy()
+            predList = np.concatenate((predList, predLabels))
+            grndList = np.concatenate((grndList, labels))
+
+    confMat = sklearn.metrics.confusion_matrix(grndList, predList)
+
+    # normalize the confusion matrix
+    a = confMat.sum(axis=1).reshape((-1, 1))
+    confMat = confMat / a
+
+    acc_avgClass = 0
+    for i in range(confMat.shape[0]):
+        acc_avgClass += confMat[i, i]
+
+    acc_avgClass /= confMat.shape[0]
+
+    acc_per_class = [0] * n_classes
+
+    for i in range(n_classes):
+        acc_per_class[i] = confMat[i, i]
+
+    return acc_per_class
