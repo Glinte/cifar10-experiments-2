@@ -72,7 +72,7 @@ if __name__ == '__main__':
         "_model_auto": model.__class__.__name__,
         "model": "Inception v3",
         "epochs": 120,
-        "learning_rate": 0.001,
+        "learning_rate": 0.0004,
         "batch_size": 64,
         "device": torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
         "dataset": "CIFAR100LT"
