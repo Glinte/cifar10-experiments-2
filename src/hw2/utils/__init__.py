@@ -216,6 +216,9 @@ def train_on_cifar(
 
                 optimizer.zero_grad()
                 outputs: torch.Tensor = model(inputs)
+                predicted = outputs.argmax(dim=1)
+                matches = (predicted == labels)
+
                 if label_smoothing is not None:
                     labels = F.one_hot(labels, num_classes=outputs.size(1)).float()
                     label_smoothing = 0.1
@@ -224,14 +227,14 @@ def train_on_cifar(
                     smoothing_factors = torch.full_like(outputs_max_prob, label_smoothing)
                     smoothing_factors = torch.minimum(smoothing_factors, outputs_top_one_uncertainty)
                     labels = labels * (1 - smoothing_factors).unsqueeze(1) + (smoothing_factors / labels.size(1)).unsqueeze(1).repeat(1, labels.size(1))
+
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
 
                 running_loss += loss.item()
-                predicted = outputs.argmax(dim=1)
                 total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+                correct += matches.sum().item()
 
                 if batch_size > 500 or i % (500 // batch_size) == 0:
                     logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item():.4f}")
