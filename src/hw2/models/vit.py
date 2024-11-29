@@ -8,7 +8,7 @@ from torch import nn, optim
 from torch.optim import lr_scheduler
 from transformers import ViTImageProcessor, ViTForImageClassification
 
-from hw2.util import train_on_cifar
+from hw2.utils import train_on_cifar
 
 
 def basic_showcase():

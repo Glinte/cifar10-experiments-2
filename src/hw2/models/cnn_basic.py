@@ -11,7 +11,7 @@ from torch import nn
 from torch import optim
 from torch.nn import functional as F
 
-from hw2.util import train_on_cifar
+from hw2.utils import train_on_cifar
 from hw2 import CIFAR10_NORMALIZATION
 
 if TYPE_CHECKING:

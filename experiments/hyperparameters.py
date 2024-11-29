@@ -11,7 +11,7 @@ from torchvision.transforms import v2
 
 from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
 from hw2.models.cnn_basic import LeNet5
-from hw2.util import find_max_batch_size, train_on_cifar
+from hw2.utils import find_max_batch_size, train_on_cifar
 
 
 def find_maximum_batch_size():

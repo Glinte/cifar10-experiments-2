@@ -13,7 +13,7 @@ from torch.nn import CrossEntropyLoss
 
 from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
 from hw2.open_set import one_minus_max_of_prob
-from hw2.util import validate_on_open_set, train_on_cifar, validate_on_cifar
+from hw2.utils import train_on_cifar, validate_on_cifar, validate_on_open_set
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader

@@ -4,7 +4,7 @@ from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2
 
 from hw2 import PROJECT_ROOT, CIFAR10_NORMALIZATION
-from hw2.util import find_mean_and_stddev
+from hw2.utils import find_mean_and_stddev
 
 
 def test_cifar_10_normalization() -> None:
