@@ -316,7 +316,7 @@ def validate_on_cifar(
     if cifar_test_loader is None:
         test_loader = DataLoader(
             CIFAR(root=PROJECT_ROOT / "data", train=False, download=True, transform=transform),
-            batch_size=n_samples,
+            batch_size=128,
             shuffle=False,
         )
     else:
