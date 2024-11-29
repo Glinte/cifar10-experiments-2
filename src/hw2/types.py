@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:  # https://github.com/patrick-kidger/jaxtyping/issues/70
-    from torch import TorchTensor
+    from torch import Tensor as TorchTensor
     from numpy import ndarray
     from jaxtyping import Array as JaxArray
     from tensorflow import TfTensor
