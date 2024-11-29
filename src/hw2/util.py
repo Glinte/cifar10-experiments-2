@@ -125,7 +125,7 @@ def train_on_cifar(
     cifar_dataset: Literal["10", "100", "100LT"] = "10",
 ) -> tuple[float, float]:
     """
-    Train a model on CIFAR-10.
+    Train a model on CIFAR-10/100.
 
     It is assumed that the model takes in 3x32x32 images and outputs 10 classes.
 
@@ -171,11 +171,11 @@ def train_on_cifar(
     if seed is not None:
         g.manual_seed(seed)
 
-    if cifar_dataset == "10":
+    if cifar_dataset == "CIFAR10":
         CIFAR = CIFAR10
-    elif cifar_dataset == "100":
+    elif cifar_dataset == "CIFAR100":
         CIFAR = CIFAR100
-    elif cifar_dataset == "100LT":
+    elif cifar_dataset == "CIFAR100LT":
         CIFAR = CIFAR100LT
     else:
         raise ValueError(f"Unknown value {cifar_dataset} for cifar_dataset. Check type hint for valid values.")
@@ -266,10 +266,10 @@ def validate_on_cifar(
     cifar_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     additional_metrics: list[Callable[[torch.Tensor, torch.Tensor], Any]] | None = None,
     n_samples: int = 10000,
-    cifar_dataset: Literal["10", "100", "100LT"] = "10",
+    cifar_dataset: Literal["CIFAR10", "CIFAR100", "CIFAR100LT"] = "CIFAR10",
 ) -> dict[str, Any]:
     """
-    Validate a model on CIFAR-10.
+    Validate a model on CIFAR-10/100.
 
     Args:
         model: The model to validate.
@@ -293,14 +293,14 @@ def validate_on_cifar(
     if transform and cifar_test_loader:
         raise ValueError("transform and cifar_train_loader cannot be used together")
 
-    if cifar_dataset == "10":
+    if cifar_dataset == "CIFAR10":
         CIFAR = CIFAR10
-    elif cifar_dataset == "100":
+    elif cifar_dataset == "CIFAR100":
         CIFAR = CIFAR100
-    elif cifar_dataset == "100LT":
+    elif cifar_dataset == "CIFAR100LT":
         CIFAR = CIFAR100LT
     else:
-        raise ValueError("cifar_dataset must be either '10' or '100'")
+        raise ValueError(f"Unknown value {cifar_dataset} for cifar_dataset. Check type hint for valid values.")
 
     if cifar_test_loader is None:
         test_loader = DataLoader(
@@ -371,7 +371,7 @@ def validate_on_open_set(
     thresholds: None | int | list[float] | torch.Tensor = ...,
     mnist_train_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
     mnist_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
-    cifar10_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
+    cifar_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     ...
 
@@ -388,7 +388,7 @@ def validate_on_open_set(
     thresholds: None | int | list[float] | torch.Tensor = ...,
     mnist_train_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
     mnist_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
-    cifar10_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
+    cifar_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = ...,
 ) -> list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
     ...
 
@@ -404,9 +404,9 @@ def validate_on_open_set(
     thresholds: None | int | list[float] | torch.Tensor = None,
     mnist_train_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
     mnist_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
-    cifar10_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    cifar_test_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] | None = None,
 ) -> list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] | tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Using a model trained on CIFAR-10, validate the open-set classification on Fashion-MNIST.
+    """Using a model trained on CIFAR-10/100, validate the open-set classification on Fashion-MNIST.
 
     Both the training and testing dataset of Fashion-MNIST are used to validate the model.
 
@@ -420,7 +420,7 @@ def validate_on_open_set(
         thresholds: Refer to torchmetrics.classification.BinaryROC for more information.
         mnist_train_loader: DataLoader of Fashion-MNIST training data. If None, a DataLoader is created from Fashion-MNIST.
         mnist_test_loader: DataLoader of Fashion-MNIST test data. If None, a DataLoader is created from Fashion-MNIST.
-        cifar10_test_loader: DataLoader of CIFAR-10 test data. If None, a DataLoader is created from CIFAR-10.
+        cifar_test_loader: DataLoader of CIFAR test data. If None, a DataLoader is created from CIFAR-10.
 
     Returns:
         A list of length n_fns containing the results of the open set detection.
@@ -494,7 +494,7 @@ def validate_on_open_set(
     with torch.no_grad():
         _load_data(mnist_train_loader, label=1)
         _load_data(mnist_test_loader, label=1)
-        _load_data(cifar10_test_loader, label=0)
+        _load_data(cifar_test_loader, label=0)
 
     results = []
     for i, open_set_probs in enumerate(all_open_set_probs):
