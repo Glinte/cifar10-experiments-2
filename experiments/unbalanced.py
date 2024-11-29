@@ -7,7 +7,7 @@ from torch.optim import lr_scheduler
 
 from hw2.data.cifar100_lt import CIFAR100LT
 from hw2.models.cnn_basic import LeNet5
-from hw2.util import train_on_cifar
+from hw2.utils import train_on_cifar
 
 
 def weighted_vs_unweighted_loss(model: nn.Module):
@@ -38,7 +38,7 @@ def weighted_vs_unweighted_loss(model: nn.Module):
         dir=PROJECT_ROOT / "wandb",
     )
     weights = 1 / torch.tensor(CIFAR100LT().img_num_per_cls)
-    train_on_cifar(model, optimizer, nn.CrossEntropyLoss(weight=weights), scheduler, CIFAR100LT.basic_train_transform, epochs, device, log_run=True, cifar_dataset="100LT")
+    train_on_cifar(model, optimizer, nn.CrossEntropyLoss(weight=weights), scheduler, CIFAR100LT.basic_train_transform, epochs, device, log_run=True, cifar_dataset="CIFAR100LT")
     run.finish()
 
     run = wandb.init(
@@ -48,7 +48,7 @@ def weighted_vs_unweighted_loss(model: nn.Module):
         config=config | {"weighted_loss": False},
         dir=PROJECT_ROOT / "wandb",
     )
-    train_on_cifar(model, optimizer, nn.CrossEntropyLoss(), scheduler, CIFAR100LT.basic_train_transform, epochs, device, log_run=True, cifar_dataset="100LT")
+    train_on_cifar(model, optimizer, nn.CrossEntropyLoss(), scheduler, CIFAR100LT.basic_train_transform, epochs, device, log_run=True, cifar_dataset="CIFAR100LT")
     run.finish()
 
 
