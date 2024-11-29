@@ -17,7 +17,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import torch
 
-from hw2.types import Array
+from hw2.types_ import Array
 
 
 @beartype
