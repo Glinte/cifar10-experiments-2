@@ -70,7 +70,7 @@ if __name__ == '__main__':
         "model_type": "CNN",
         "_model_auto": model.__class__.__name__,
         "model": "Inception v3",
-        "epochs": 40,
+        "epochs": 90,
         "learning_rate": 0.1,
         "batch_size": 64,
         "device": torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
