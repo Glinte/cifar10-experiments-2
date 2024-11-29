@@ -117,7 +117,7 @@ if __name__ == '__main__':
     train_on_cifar(model, optimizer, criterion, scheduler, transform, config["epochs"], config["device"], log_run=True,
                    cifar_dataset=config["dataset"], n_test_samples=10000, batch_sampler=sampler)
 
-    results = validate_on_cifar(model, criterion, CIFAR100LT.basic_test_transform, config["device"],
+    results = validate_on_cifar(model, criterion, transform, config["device"],
                                 additional_metrics=[partial(metrics.classification_report, digits=4, zero_division=0)],
                                 cifar_dataset="CIFAR100LT")
 
