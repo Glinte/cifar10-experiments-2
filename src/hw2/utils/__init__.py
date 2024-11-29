@@ -124,6 +124,7 @@ def train_on_cifar(
     n_test_samples: int = 500,
     save_to: str | Path | None = None,
     cifar_dataset: Literal["CIFAR10", "CIFAR100", "CIFAR100LT"] = "CIFAR10",
+    label_smoothing: float | None = None,
 ) -> tuple[float, float]:
     """
     Train a model on CIFAR-10/100.
@@ -151,6 +152,7 @@ def train_on_cifar(
         n_test_samples: Number of samples to use for validation during training. A full validation will be run at the end of training regardless of this parameter.
         save_to: Path to save the model to after training.
         cifar_dataset: Whether to use CIFAR-10 or CIFAR-100. If data loaders are provided, this parameter is ignored. LT stands for long-tailed.
+        label_smoothing: Label smoothing factor. If None, no label smoothing is applied.
 
     Returns:
         Loss and accuracy on the test set after training.
@@ -214,6 +216,8 @@ def train_on_cifar(
 
                 optimizer.zero_grad()
                 outputs: torch.Tensor = model(inputs)
+                if label_smoothing is not None:
+                    labels = labels * (1 - label_smoothing) + label_smoothing / outputs.size(1)
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
