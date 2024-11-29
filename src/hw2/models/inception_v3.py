@@ -48,6 +48,9 @@ if __name__ == '__main__':
 
     tags = ["weighted"]
 
+    dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=True, imb_type='exp', imb_factor=0.01, download=True,
+                         transform=transform)
+
     if config["dataset"] == "CIFAR100LT":
         class_weights = 1 / torch.tensor(dataset.img_num_per_cls, device=config["device"])
         sample_weights = [class_weights[target] for target in dataset.targets]
