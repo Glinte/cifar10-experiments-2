@@ -264,7 +264,7 @@ def train_on_cifar(
             assert wandb.run is not None
             wandb.run.log_model(save_to)
 
-    return validate_metrics["loss"], validate_metrics["accuracy"]
+    return validate_metrics.get("loss"), validate_metrics.get("accuracy")  # May be None if training was interrupted in the first epoch
 
 
 def validate_on_cifar(
