@@ -36,7 +36,12 @@ def get_inception_v3(num_classes: int = 1000) -> torchvision.models.Inception3:
         # Call the original forward method
         outputs = original_forward(x)
         # Return only the logits from the original outputs
-        return outputs.logits
+        if isinstance(outputs, tuple):
+            return outputs[0]
+        elif isinstance(outputs, torch.Tensor):
+            return outputs
+        else:
+            raise ValueError(f"Unexpected output type: {type(outputs)}")
 
     # Override the forward method with the custom one
     model.forward = MethodType(custom_forward, model)
