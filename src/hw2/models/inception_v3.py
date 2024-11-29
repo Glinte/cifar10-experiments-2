@@ -5,6 +5,7 @@ import logging
 
 import torch
 import torchvision
+from hw2.utils.lr_scheduler import warmup
 from torchvision.models import Inception3
 
 from sklearn import metrics
@@ -70,8 +71,8 @@ if __name__ == '__main__':
         "model_type": "CNN",
         "_model_auto": model.__class__.__name__,
         "model": "Inception v3",
-        "epochs": 90,
-        "learning_rate": 0.1,
+        "epochs": 120,
+        "learning_rate": 0.005,
         "batch_size": 64,
         "device": torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
         "dataset": "CIFAR100LT"
@@ -95,7 +96,7 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), weight_decay=0.1, lr=config["learning_rate"])
     # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=config["epochs"], eta_min=0)
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.2)
+    scheduler = warmup(lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.2))
 
     config.update({
         "optimizer": optimizer.__class__.__name__,
