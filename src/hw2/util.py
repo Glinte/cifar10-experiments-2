@@ -13,8 +13,11 @@ import wandb
 from PIL import Image
 from beartype import beartype
 from pandas import DataFrame
+from sklearn import metrics
+
 from matplotlib import pyplot as plt
 from torch import nn
+from torch.nn import functional as F
 from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau
 from torch.utils.data import Dataset, DataLoader, BatchSampler, RandomSampler, SequentialSampler
 from torchmetrics.classification import BinaryROC
@@ -25,6 +28,9 @@ from wandb.apis.public.runs import Runs
 
 from hw2 import PROJECT_ROOT
 from hw2.data.cifar100_lt import CIFAR100LT
+
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -585,7 +591,7 @@ def get_per_class_acc(model: nn.Module, dataloader: DataLoader, n_classes: int =
             predList = np.concatenate((predList, predLabels))
             grndList = np.concatenate((grndList, labels))
 
-    confMat = sklearn.metrics.confusion_matrix(grndList, predList)
+    confMat = metrics.confusion_matrix(grndList, predList)
 
     # normalize the confusion matrix
     a = confMat.sum(axis=1).reshape((-1, 1))
