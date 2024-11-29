@@ -58,7 +58,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, force=True)
 
     # Test the model and transform
-    model = get_inception_v3(num_classes=10)
+    model = get_inception_v3(num_classes=100)
     transform = get_inception_v3_transform()
 
     config = {
