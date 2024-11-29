@@ -92,7 +92,7 @@ if __name__ == '__main__':
         class_weights = None
         sampler = None
 
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), weight_decay=0.1, lr=config["learning_rate"])
     # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=config["epochs"], eta_min=0)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.2)
