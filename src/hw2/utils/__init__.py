@@ -217,7 +217,13 @@ def train_on_cifar(
                 optimizer.zero_grad()
                 outputs: torch.Tensor = model(inputs)
                 if label_smoothing is not None:
-                    labels = labels * (1 - label_smoothing) + label_smoothing / outputs.size(1)
+                    labels = F.one_hot(labels, num_classes=outputs.size(1)).float()
+                    label_smoothing = 0.1
+                    outputs_max_prob = F.softmax(outputs, dim=1).max(dim=1).values
+                    outputs_top_one_uncertainty = 1 - outputs_max_prob
+                    smoothing_factors = torch.full_like(outputs_max_prob, label_smoothing)
+                    smoothing_factors = torch.minimum(smoothing_factors, outputs_top_one_uncertainty)
+                    labels = labels * (1 - smoothing_factors).unsqueeze(1) + (smoothing_factors / labels.size(1)).unsqueeze(1).repeat(1, labels.size(1))
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
