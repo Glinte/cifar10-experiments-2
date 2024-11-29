@@ -542,39 +542,6 @@ def get_histories_with_config(runs: Runs) -> DataFrame:
     return histories
 
 
-def plot_per_class_accuracy(
-    models_dict: dict[str, nn.Module],
-    dataloader: DataLoader,
-    labelnames: Sequence[Any],
-    img_num_per_cls: Sequence[int],
-    n_classes: int = 100,
-    device: torch.device = torch.device("cpu")
-):
-    # Adapted from https://github.com/ShadeAlsha/LTR-weight-balancing/blob/master/utils/plot_funcs.py
-    result_dict = {}
-    for label in models_dict:
-        model = models_dict[label]
-        acc_per_class = get_per_class_acc(model, dataloader, n_classes=n_classes, device=device)
-        result_dict[label] = acc_per_class
-
-    plt.figure(figsize=(15, 4), dpi=64, facecolor='w', edgecolor='k')
-    plt.xticks(list(range(100)), labelnames, rotation=90, fontsize=8);  # Set text labels.
-    plt.title('per-class accuracy vs. per-class #images', fontsize=20)
-    ax1 = plt.gca()
-    ax2 = ax1.twinx()
-    for label in result_dict:
-        ax1.bar(list(range(100)), result_dict[label], alpha=0.7, width=1, label=label, edgecolor="black")
-
-    ax1.set_ylabel('accuracy', fontsize=16, color='tab:blue')
-    ax1.tick_params(axis='y', labelcolor='tab:blue', labelsize=16)
-
-    ax2.set_ylabel('#images', fontsize=16, color='r')
-    ax2.plot(img_num_per_cls, linewidth=4, color='r')
-    ax2.tick_params(axis='y', labelcolor='r', labelsize=16)
-
-    ax1.legend(prop={'size': 14})
-
-
 def get_per_class_acc(model: nn.Module, dataloader: DataLoader, n_classes: int = 100, device: torch.device = torch.device("cpu")):
     predList = np.array([])
     grndList = np.array([])
