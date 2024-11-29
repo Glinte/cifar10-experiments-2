@@ -225,6 +225,9 @@ def train_on_cifar(
 
                 if batch_size > 500 or i % (500 // batch_size) == 0:
                     logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item():.4f}")
+                    if log_run:
+                        assert wandb.run is not None
+                        wandb.run.log({"batch": i, "train/loss": loss.item()})
 
             running_loss /= len(cifar_train_loader)
             accuracy = correct / total
