@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any, Callable, List, Tuple, Literal
 
 import numpy as np
+
+from hw2.visualization import visualize_images
 from matplotlib import patches, pyplot as plt
 from PIL import Image
 import torch
@@ -48,6 +50,7 @@ class CIFAR100LT(CIFAR100):
             v2.RandomCrop(32, padding=4),
             v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(*CIFAR100LT_NORMALIZATION),
+            # v2.ToPILImage(),  # Uncomment this line to visualize the transformed images
         ]
     )
 
@@ -286,10 +289,12 @@ def get_img_num_per_cls(cls_num: int, imb_type: Literal["exp", "step"], imb_fact
 
 
 def main():
-    dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=True, imb_type='exp', imb_factor=0.01, download=True, transform=None)
+    dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=True, imb_type='exp', imb_factor=0.01, download=True, transform=CIFAR100LT.basic_train_transform)
     # print(dataset.get_superclass_sample())
     # print(CIFAR100LT_NORMALIZATION)
     fig = dataset.visualize()
+    plt.suptitle("CIFAR-100 Long-Tailed (Imbalanced) Dataset, after transformations", fontsize=24)
+    fig.savefig(PROJECT_ROOT / "artifacts" / "CISC3027 hw3" / "cifar100lt_samples_trasnformed.svg")
     fig.show()
 
 
