@@ -5,6 +5,7 @@ from typing import Any, Callable, List, Tuple, Literal
 
 import numpy as np
 from PIL import Image
+import torch
 from torchvision.datasets import CIFAR100, VisionDataset
 from torchvision.transforms import v2
 from typing_extensions import override
@@ -40,8 +41,10 @@ class CIFAR100LT(CIFAR100):
     basic_train_transform = v2.Compose(
         [
             v2.ToImage(),
-            v2.RandomCrop(32, padding=4),
             v2.RandomHorizontalFlip(),
+            v2.RandomAffine(degrees=10, translate=(0.1, 0.1)),
+            v2.RandomCrop(32, padding=4),
+            v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(*CIFAR100LT_NORMALIZATION),
         ]
     )
@@ -49,6 +52,7 @@ class CIFAR100LT(CIFAR100):
     basic_test_transform = v2.Compose(
         [
             v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(*CIFAR100LT_NORMALIZATION),
         ]
     )
