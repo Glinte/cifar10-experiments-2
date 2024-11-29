@@ -64,7 +64,8 @@ def varying_batch_size_on_training_performance():
                 "learning_rate": learning_rate,
                 "batch_size": batch_size,
                 "device": device,
-            }
+            },
+            dir=PROJECT_ROOT / "wandb",
         )
 
         train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=device, log_run=True,
@@ -119,7 +120,8 @@ def varying_learning_rate_on_training_performance():
                 "learning_rate": learning_rate,
                 "batch_size": 64,
                 "device": device,
-            }
+            },
+            dir=PROJECT_ROOT / "wandb",
         )
 
         train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=device, log_run=True,
@@ -173,7 +175,8 @@ def using_different_optimizers():
                 "optimizer": optimizer.__class__.__name__,
                 "batch_size": 64,
                 "device": device,
-            }
+            },
+            dir=PROJECT_ROOT / "wandb",
         )
 
         train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=device, log_run=True,
@@ -227,7 +230,8 @@ def varying_epochs():
             "batch_size": 64,
             "device": device,
             "learning_rate": learning_rate,
-        }
+        },
+        dir=PROJECT_ROOT / "wandb",
     )
 
     train_on_cifar(model, optimizer, criterion, None, transform, epochs=epochs, device=device, log_run=True,

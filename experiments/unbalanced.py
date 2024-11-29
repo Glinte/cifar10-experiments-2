@@ -1,6 +1,7 @@
 """Experiments related to unbalanced datasets."""
 import torch
 import wandb
+from hw2 import PROJECT_ROOT
 from torch import nn, optim
 from torch.optim import lr_scheduler
 
@@ -34,6 +35,7 @@ def weighted_vs_unweighted_loss(model: nn.Module):
         group=None,
         job_type="train",
         config=config | {"weighted_loss": True},
+        dir=PROJECT_ROOT / "wandb",
     )
     weights = 1 / torch.tensor(CIFAR100LT().img_num_per_cls)
     train_on_cifar(model, optimizer, nn.CrossEntropyLoss(weight=weights), scheduler, CIFAR100LT.basic_train_transform, epochs, device, log_run=True, cifar_dataset="100LT")
@@ -44,6 +46,7 @@ def weighted_vs_unweighted_loss(model: nn.Module):
         group=None,
         job_type="train",
         config=config | {"weighted_loss": False},
+        dir=PROJECT_ROOT / "wandb",
     )
     train_on_cifar(model, optimizer, nn.CrossEntropyLoss(), scheduler, CIFAR100LT.basic_train_transform, epochs, device, log_run=True, cifar_dataset="100LT")
     run.finish()
