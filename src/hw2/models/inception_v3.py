@@ -1,9 +1,12 @@
 from functools import partial
+from types import MethodType
 from typing import Callable
 import logging
 
 import torch
 import torchvision
+from torchvision.models import Inception3
+
 from sklearn import metrics
 from torch import nn, optim
 from torch.optim import lr_scheduler
@@ -25,6 +28,19 @@ def get_inception_v3(num_classes: int = 1000) -> torchvision.models.Inception3:
     model = torchvision.models.inception_v3(weights=torchvision.models.Inception_V3_Weights.IMAGENET1K_V1)
     if num_classes != 1000:  # Keep the original classifier and weights if num_classes is 1000
         model.fc = torch.nn.Linear(in_features=model.fc.in_features, out_features=num_classes)
+
+    original_forward = model.forward
+
+    def custom_forward(self, x: torch.Tensor) -> torch.Tensor:
+        """InceptionV3 forward pass returns a namedtuple, we only want the output tensor."""
+        # Call the original forward method
+        outputs = original_forward(x)
+        # Return only the logits from the original outputs
+        return outputs.logits
+
+    # Override the forward method with the custom one
+    model.forward = MethodType(custom_forward, model)
+
     return model
 
 
