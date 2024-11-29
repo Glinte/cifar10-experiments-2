@@ -1,7 +1,7 @@
 from torch.optim.lr_scheduler import SequentialLR, LinearLR, LRScheduler
 
 
-def warmup(scheduler: LRScheduler, start_factor: float, warmup_iters: int):
+def warmup(scheduler: LRScheduler, start_factor: float = 0.2, warmup_iters: int = 5):
     """
     Append a linear warmup scheduler to the given scheduler. Do not try to chain multiple schedulers with this function.
 
