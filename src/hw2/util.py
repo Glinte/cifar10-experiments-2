@@ -13,6 +13,7 @@ import wandb
 from PIL import Image
 from beartype import beartype
 from pandas import DataFrame
+from matplotlib import pyplot as plt
 from torch import nn
 from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau
 from torch.utils.data import Dataset, DataLoader, BatchSampler, RandomSampler, SequentialSampler
