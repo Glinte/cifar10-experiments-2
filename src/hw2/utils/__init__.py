@@ -14,7 +14,6 @@ from beartype import beartype
 from hw2 import PROJECT_ROOT
 from hw2.data.cifar100_lt import CIFAR100LT
 from pandas import DataFrame
-from sklearn import metrics
 from torch import nn
 from torch.nn import functional as F
 from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau
@@ -550,39 +549,3 @@ def get_histories_with_config(runs: Runs) -> DataFrame:
     assert isinstance(config_df, DataFrame)
     histories = pd.merge(config_df, histories, left_on="run_id", right_on="run_id")
     return histories
-
-
-def get_per_class_acc(model: nn.Module, dataloader: DataLoader, n_classes: int = 100, device: torch.device = torch.device("cpu")):
-    predList = np.array([])
-    grndList = np.array([])
-    model.eval()
-    for sample in dataloader:
-        with torch.no_grad():
-            images, labels = sample
-            images = images.to(device)
-            labels = labels.type(torch.long).view(-1).numpy()
-            logits = model(images)
-            softmaxScores = F.softmax(logits, dim=1)
-
-            predLabels = softmaxScores.argmax(dim=1).detach().squeeze().cpu().numpy()
-            predList = np.concatenate((predList, predLabels))
-            grndList = np.concatenate((grndList, labels))
-
-    confMat = metrics.confusion_matrix(grndList, predList)
-
-    # normalize the confusion matrix
-    a = confMat.sum(axis=1).reshape((-1, 1))
-    confMat = confMat / a
-
-    acc_avgClass = 0
-    for i in range(confMat.shape[0]):
-        acc_avgClass += confMat[i, i]
-
-    acc_avgClass /= confMat.shape[0]
-
-    acc_per_class = [0] * n_classes
-
-    for i in range(n_classes):
-        acc_per_class[i] = confMat[i, i]
-
-    return acc_per_class

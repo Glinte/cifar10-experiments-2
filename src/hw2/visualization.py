@@ -8,16 +8,21 @@ from PIL import Image
 from beartype import beartype
 from beartype.door import is_bearable
 from beartype.vale import Is
+from hw2 import PROJECT_ROOT
 from jaxtyping import Num, Integer, Float, jaxtyped
 from matplotlib import colormaps
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
+from sklearn import metrics
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import torch
 
 from hw2.types_ import Array
+from torch import nn
+from torch.nn import functional as F
+from torch.utils.data import DataLoader
 
 
 @beartype
@@ -356,9 +361,78 @@ def plot_per_class_accuracy(
     ax1.legend(prop={'size': 14})
 
 
+def get_per_class_acc(model: nn.Module, dataloader: DataLoader, n_classes: int = 100, device: torch.device = torch.device("cpu")):
+    predList = np.array([])
+    grndList = np.array([])
+    model.eval()
+    for sample in dataloader:
+        with torch.no_grad():
+            images, labels = sample
+            images = images.to(device)
+            labels = labels.type(torch.long).view(-1).numpy()
+            logits = model(images)
+            softmaxScores = F.softmax(logits, dim=1)
+
+            predLabels = softmaxScores.argmax(dim=1).detach().squeeze().cpu().numpy()
+            predList = np.concatenate((predList, predLabels))
+            grndList = np.concatenate((grndList, labels))
+
+    confMat = metrics.confusion_matrix(grndList, predList)
+
+    # normalize the confusion matrix
+    a = confMat.sum(axis=1).reshape((-1, 1))
+    confMat = confMat / a
+
+    acc_avgClass = 0
+    for i in range(confMat.shape[0]):
+        acc_avgClass += confMat[i, i]
+
+    acc_avgClass /= confMat.shape[0]
+
+    acc_per_class = [0] * n_classes
+
+    for i in range(n_classes):
+        acc_per_class[i] = confMat[i, i]
+
+    return acc_per_class
+
+
+def plot_lr():
+    lrs = []
+    lr = 0.0004 / 5
+    for epoch in range(60):
+        if epoch < 5:
+            lr += 0.0004 / 5
+        elif epoch % 10 == 0:
+            lr = lr / 5
+        lrs.append(lr)
+    plt.plot(lrs)
+    plt.xlabel("Epoch")
+    plt.ylabel("Learning rate")
+    plt.title("Inception v3 learning rate schedule")
+    plt.savefig(PROJECT_ROOT / "artifacts" / "inception3_lr_schedule.svg")
+    plt.show()
+
 
 def main():
-    visualize_images(CIFAR100LT)
+    import timm
+    from hw2.data.cifar100_lt import CIFAR100LT, get_img_num_per_cls
+
+    model = timm.create_model("timm/vit_mediumd_patch16_reg4_gap_384.sbb2_e200_in12k_ft_in1k")
+    data_config = timm.data.resolve_model_data_config(model)
+    transforms = timm.data.create_transform(**data_config, is_training=False)
+    model.head = torch.nn.Linear(in_features=model.head.in_features, out_features=100)
+    model.load_state_dict(torch.load(PROJECT_ROOT / "models" / "cifar100lt" / "vit_0.7399_epochs8.5.pth"))
+    dataset = CIFAR100LT(root=PROJECT_ROOT / "data", train=False, download=True, transform=transforms)
+    test_loader = DataLoader(
+        dataset,
+        batch_size=128,
+        shuffle=False,
+    )
+    model.to(torch.device("cuda")).eval()
+    plot_per_class_accuracy({"model": model}, dataloader=test_loader, labelnames=dataset.classes,
+                            img_num_per_cls=get_img_num_per_cls(100, "exp", 0.01, 500), device=torch.device("cuda"))
+    plt.savefig(PROJECT_ROOT / "artifacts" / "vit_per_class_accuracy.png")
 
 
 if __name__ == "__main__":
